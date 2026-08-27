@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boston's Culture, Mapped.</title>
+<meta name="description" content="Help the City map where arts and culture happen in Boston. Add a space, confirm one, or correct the record.">
+<link rel="icon" href="data:,">
+<!-- City of Boston brand typefaces: Montserrat for headers/primary buttons
+     (always uppercase bold), Lora for body text. preconnect shaves a round
+     trip off the font fetch; the CSS stack falls back to Arial/Georgia per
+     Boston's own substitution guidance if Google Fonts is unreachable. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<link rel="stylesheet" href="styles.css?v=34">
+</head>
+<body>
+
+<!-- Shown only when CONFIG still has placeholder values. app.js fills it in. -->
+<div id="setupBanner" hidden></div>
+
+<div id="app">
+
+  <!-- ========================= Sidebar ========================= -->
+  <aside id="sidebar">
+    <h1>Boston's Culture, Mapped.</h1>
+    <p class="lede">Tell the City of Boston about the cultural spaces that matter to you by making sure they're included in the 2026 Boston Cultural Space Inventory. Your input will support efforts to protect, strengthen, and expand our city's cultural infrastructure.</p>
+
+    <h2>How to take part</h2>
+    <ol class="steps">
+      <li><b>Add a space:</b> Search for a space by name or address, or click the map to drop a pin.</li>
+      <li><b>Confirm the city's data so far:</b> Click a pin, then confirm the location and its details are right. Submit a correction if they are not.</li>
+      <li><b>Tell us more:</b> If you operate, work in, or volunteer in a space, share more information about it through our cultural space deep-dive.</li>
+    </ol>
+    <!-- href is filled in by app.js from CONFIG.SURVEY_FORM_BASE so the survey
+         address lives in one place only. -->
+    <a class="btn-cta js-survey-link" href="#" target="_blank" rel="noopener" hidden>Cultural space deep dive</a>
+
+    <h2>What is a 'cultural space'?</h2>
+    <p>Any buildings or spaces where arts and culture is happening &mdash; daily, on the weekends, once a month. This can include arts-specific spaces, but also public spaces, retail, food and drink or faith-based spaces that are sites for cultural activity. If you feel a place is part of how you experience arts and culture in Boston &mdash; make sure it's on the map!</p>
+
+    <div class="side-nav">
+      <a class="btn-cta" href="about.html" target="_blank" rel="noopener">About this project</a>
+      <a class="btn-cta" href="faq.html" target="_blank" rel="noopener">FAQs</a>
+    </div>
+
+    <!-- OWNER TODO: this whole block is marked class="wip" (yellow highlight)
+         while the contact details are still being settled — remove the class
+         from each <p> as it is signed off. Same block on about.html and
+         faq.html. -->
+    <div class="contact">
+      <p class="wip"><b>For more information about this project, please contact:</b><br>
+      Raisa Saniat &mdash; Director of Cultural Planning, Mayor's Office of Arts and Culture</p>
+      <p class="wip"><b>For more information about this map or to report any technical difficulties, please contact:</b><br>
+      <span class="placeholder">(project email address coming soon)</span></p>
+    </div>
+
+  </aside>
+
+  <!-- ========================= Map ========================= -->
+  <div id="mapWrap">
+    <div id="map" aria-label="Map of Boston civic and cultural spaces"></div>
+
+    <!-- Collapses the whole sidebar so the map fills the window, like the
+         panel toggle in Google Maps. app.js flips body.map-only. -->
+    <button class="side-toggle" id="sidebarToggle" aria-expanded="true" title="Hide the panel" aria-label="Hide the panel"><span class="arrow">&#10094;</span></button>
+
+    <!-- Floating controls, top-right of the map. The count pill doubles as
+         the toggle for the scrollable list of spaces, which drops down
+         beneath it. -->
+    <div class="map-controls">
+      <!-- Refresh sits to the LEFT of Add (owner's request); the circle-arrow
+           glyph is decorative, so it is aria-hidden. -->
+      <div class="ctrl-row">
+        <button class="btn-quiet" id="refreshBtn" title="Load the latest community submissions"><span class="refresh-ico" aria-hidden="true">&#8635;</span> Refresh</button>
+        <button class="btn-cta" id="addBtn">+ Add a space</button>
+      </div>
+      <button class="count-pill" id="listToggle" aria-expanded="false" aria-controls="listPanel" title="Show the list of spaces">
+        <span id="countPill">Loading&hellip;</span><span class="plus" aria-hidden="true">+</span>
+      </button>
+      <div class="list-panel" id="listPanel" hidden>
+        <div id="assetList" role="list"></div>
+      </div>
+    </div>
+
+    <!-- Legend + filter chips, bottom-right of the map. app.js fills #filters
+         (and moves Google's zoom buttons bottom-LEFT so they don't collide). -->
+    <div class="map-legend" id="mapLegend">
+      <div class="legend-title">Legend</div>
+      <div class="filters" id="filters" aria-label="Filter the pins by the space's purpose"></div>
+      <div class="legend-hint">Pins are colored by the space's purpose &mdash; a pin with two colors has more than one. Hover a purpose to see what it means; tap a color to hide or show those pins.</div>
+    </div>
+
+    <div id="mapError" class="map-error" hidden></div>
+  </div>
+</div>
+
+<!-- ===================== Intro pop-up (shown on load) ===================== -->
+<div class="modal-backdrop open" id="introModal" role="dialog" aria-modal="true" aria-labelledby="introTitle">
+  <div class="modal intro-modal">
+    <button class="close intro-close" data-close="introModal" aria-label="Close">&times;</button>
+    <div class="intro-cols">
+
+      <div class="intro-main">
+        <h1 id="introTitle">Boston's Culture, Mapped.</h1>
+        <p>Tell the City of Boston about the cultural spaces that matter to you by making sure they're included in the 2026 Boston Cultural Space Inventory. Your input will support efforts to protect, strengthen, and expand our city's cultural infrastructure.</p>
+
+        <p class="be-counted">Be counted!</p>
+        <p>We need your help to make sure the City's data is accurate and inclusive of all of the spaces where culture happens. Better data supports better policies, resourcing, and decision-making.</p>
+        <p>If you work from, visit, support or love any kind of space in Boston where arts and culture happens, make sure it's on this map. This map also captured cultural spaces that are closed, and you can use it to tell us if there's any missing.</p>
+
+        <p><b>There's three ways you can take part:</b></p>
+        <ol class="steps">
+          <li><b>Add a space:</b> Search for a space by name or address, or click the map to drop a pin.</li>
+          <li><b>Confirm the city's data so far:</b> Click a pin, then confirm the location and its details are right. Submit a correction if they are not.</li>
+          <li><b>Tell us more:</b> If you operate, work in, or volunteer in a space, share more information about it through our <a class="js-survey-link" href="#" target="_blank" rel="noopener">cultural space deep-dive</a>.</li>
+        </ol>
+
+        <p class="learn-more"><b>Learn more about the project and frequently asked questions:</b></p>
+        <div class="intro-nav">
+          <a class="btn-cta" href="about.html" target="_blank" rel="noopener">About this project</a>
+          <a class="btn-cta" href="faq.html" target="_blank" rel="noopener">FAQs</a>
+        </div>
+      </div>
+
+      <div class="intro-side">
+        <h2>What is a 'cultural space'?</h2>
+        <p>Any buildings or spaces where arts and culture is happening &mdash; daily, on the weekends, once a month. This can include arts-specific spaces, but also public spaces, retail, food and drink or faith-based spaces that are sites for cultural activity.</p>
+        <p>If you feel a place is part of how you experience arts and culture in Boston &mdash; make sure it's on the map!</p>
+        <!-- One <img>; app.js cycles through data-images so only the current
+             photo is ever downloaded. The column is a flex column and this
+             carousel has margin-top:auto, so the photos sit at the BOTTOM of
+             the bar however long the copy above them runs. -->
+        <div class="carousel" id="introCarousel"
+             data-images="assets/img/culture-01.jpg,assets/img/culture-02.jpg,assets/img/culture-03.jpg,assets/img/culture-04.jpg,assets/img/culture-05.jpg,assets/img/culture-06.jpg,assets/img/culture-07.jpg,assets/img/culture-08.jpg,assets/img/culture-09.jpg,assets/img/culture-10.jpg,assets/img/culture-11.jpg,assets/img/culture-12.jpg,assets/img/culture-13.jpg">
+          <img alt="Cultural spaces around Boston" src="assets/img/culture-01.jpg">
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============================ Add a space ============================ -->
+<div class="modal-backdrop" id="addModal" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="addTitle">Add a Cultural Space to the Map</h3>
+      <button class="close" data-close="addModal" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Shown only when correcting an existing space, never when adding. -->
+      <div class="correcting-note" id="correctingNote" hidden>
+        You are suggesting a correction to <b id="correctingName"></b>.
+        The details below are what the map currently shows — change whatever is
+        wrong and submit.
+      </div>
+
+      <h4 class="form-section">1. Find the space</h4>
+
+      <div class="field">
+        <!-- Hidden when correcting: the space has already been found, so
+             offering a search box only invites picking a different one. -->
+        <div id="searchWrap">
+          <label for="pacHost">Search for the space</label>
+          <!-- The Google Places Autocomplete element is inserted here by app.js -->
+          <div id="pacHost"></div>
+          <div class="hint">Search by organization or venue name (e.g. "Hibernian Hall") or a street address. Don't see the space listed? Close this form, and drop a pin to restart the survey with a new location.</div>
+        </div>
+        <div class="err" id="errLocation" hidden></div>
+        <!-- Set by app.js when the pin falls outside the city outline. A note,
+             never a block: spaces just over the line still belong on the map. -->
+        <div class="outside-note" id="outsideNote" hidden>Note: This space is outside the City of Boston.</div>
+        <!-- Filled by app.js when the chosen spot looks like an existing pin.
+             Advisory only — several spaces can share one address. -->
+        <div class="dup-warn" id="dupWarn" hidden></div>
+      </div>
+
+      <div class="field">
+        <label for="fName">What is the name of the space?</label>
+        <input type="text" id="fName" maxlength="120" placeholder="e.g., Hibernian Hall" autocomplete="off">
+        <div class="hint">If the space does not have a specific name, please give the name of the organization who manages the space.</div>
+        <div class="err" id="errName" hidden></div>
+      </div>
+
+      <div class="field">
+        <label for="fAddr">Where is the space located?</label>
+        <input type="text" id="fAddr" maxlength="200" autocomplete="off">
+        <!-- Wording swaps in app.js depending on how the location was set. -->
+        <div class="hint" id="addrHint">Filled in automatically from your search or map pin — edit it if it looks wrong.</div>
+      </div>
+
+      <div class="field">
+        <label for="fLocIn">Which floor is this cultural space located on?</label>
+        <select id="fLocIn"></select>
+      </div>
+
+      <h4 class="form-section">2. About the Space</h4>
+
+      <div class="field">
+        <label id="purposeLabel">What is the main purpose of this cultural space &mdash; the thing the space is most often used for? <span class="opt">(select all that apply)</span></label>
+        <div class="checklist" id="purposeList" role="group" aria-labelledby="purposeLabel"></div>
+      </div>
+
+      <div class="field" id="purposeOtherWrap" hidden>
+        <label for="fPurposeOther">You selected "Something else" &mdash; what is the space mainly used for?</label>
+        <input type="text" id="fPurposeOther" maxlength="120" placeholder="e.g., Community radio broadcasting">
+        <div class="err" id="errPurposeOther" hidden></div>
+      </div>
+
+      <div class="field">
+        <label id="typeLabel">Which of these best describes what happens in the space? <span class="opt">(select all that apply)</span></label>
+        <div class="checklist" id="typeList" role="group" aria-labelledby="typeLabel"></div>
+        <div class="err" id="errType" hidden></div>
+      </div>
+
+      <div class="field" id="otherWrap" hidden>
+        <label for="fTypeOther">If you selected other, share more below</label>
+        <input type="text" id="fTypeOther" maxlength="120" placeholder="e.g., Community radio station">
+        <div class="err" id="errTypeOther" hidden></div>
+      </div>
+
+      <div class="field">
+        <label for="fPrimary">Is this space primarily used for arts and cultural activities, or only sometimes?</label>
+        <select id="fPrimary"></select>
+        <div class="hint"><b>Most of the time</b> &mdash; most days of the week there is some kind of arts or cultural activity happening, like an arts studio or theatre. <b>Some of the time</b> &mdash; some days of the week or month, like a restaurant or park that sometimes hosts live music.</div>
+      </div>
+
+      <div class="field">
+        <label for="fClosed">Is this space now closed?</label>
+        <select id="fClosed"></select>
+      </div>
+
+      <div class="field" id="closureYearWrap" hidden>
+        <label for="fClosureYear">If this space is closed or going to close, what is the year of closure?</label>
+        <input type="text" id="fClosureYear" maxlength="20" inputmode="numeric" placeholder="e.g., 2024" autocomplete="off">
+        <div class="err" id="errClosureYear" hidden></div>
+      </div>
+
+      <h4 class="form-section">3. About You (Optional)</h4>
+
+      <div class="field">
+        <label for="fConnection">How are you connected to this space?</label>
+        <select id="fConnection"></select>
+      </div>
+
+      <p class="section-lede">If you would like to stay updated about this project, or be part of future conversations about cultural space in Boston, please provide your contact information below.</p>
+
+      <p class="section-lede">Your name, email, and affiliation will not be shared publicly or on this map. The City will only get in touch if you tick the box below.</p>
+
+      <div class="field">
+        <label for="fSubName">Name</label>
+        <input type="text" id="fSubName" maxlength="80" autocomplete="name">
+      </div>
+
+      <div class="field">
+        <label for="fSubEmail">Email</label>
+        <input type="text" id="fSubEmail" maxlength="120" inputmode="email" autocomplete="email">
+        <div class="err" id="errSubEmail" hidden></div>
+      </div>
+
+      <div class="field">
+        <label for="fSubAffil">Cultural space(s) you are affiliated with <span class="opt">(if applicable)</span></label>
+        <input type="text" id="fSubAffil" maxlength="120" placeholder="e.g., Fenway Studios" autocomplete="organization">
+      </div>
+
+      <div class="field">
+        <label class="check-row standalone" for="fContactConsent">
+          <input type="checkbox" id="fContactConsent">
+          <span>The City can contact me to learn more about the space I added to the map</span>
+        </label>
+      </div>
+
+
+    </div>
+    <div class="modal-actions">
+      <button class="btn" data-close="addModal">Cancel</button>
+      <button class="btn primary" id="saveAssetBtn">Add to the map</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================ Deep-dive prompt (shown after submitting) ================
+     Opened by app.js once a submission has SAVED — never before, because the
+     server only assigns the space_id on save, and the id is what links
+     deep-dive responses to the space automatically. -->
+<div class="modal-backdrop" id="deepDiveModal" role="dialog" aria-modal="true" aria-labelledby="deepDiveTitle">
+  <div class="modal deep-modal">
+    <div class="modal-head">
+      <h3 id="deepDiveTitle">Thank you!</h3>
+      <button class="close" data-close="deepDiveModal" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="deep-lede" id="deepDiveLede">Your space has been added to the map!</p>
+      <p class="deep-ask"><b>Do you know a lot about this space?</b><br>
+      If you are an owner, operator, staff or volunteer member, please answer our
+      deep-dive questions. Your answers will be linked to this space automatically.</p>
+      <a class="btn-cta" id="deepDiveLink" href="#" target="_blank" rel="noopener">Take the deep-dive survey</a>
+      <button class="btn-quiet" data-close="deepDiveModal">Maybe later</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- Bump ?v= on BOTH app.js and styles.css on every deploy. Browser caches,
+     not the CDN, are what serve stale code to returning visitors — and a stale
+     app.js against fresh HTML fails in confusing ways (it looks for elements
+     that no longer exist). -->
+<script src="app.js?v=34"></script>
+</body>
+</html>

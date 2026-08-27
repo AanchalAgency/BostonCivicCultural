@@ -1,0 +1,488 @@
+/* ==========================================================================
+   Boston Civic & Cultural Asset Map — styles
+
+   Colours and typefaces follow the City of Boston brand guidelines:
+   boston.gov → Innovation and Technology → Brand guidelines.
+
+   Everything lives in the :root block below, so the whole look changes from
+   one place. The brand names (Charles Blue, Optimistic Blue, Freedom Trail
+   Red) are Boston's own names for these colours — keep them, so anyone
+   checking this against the guidelines can match them up.
+
+   Universal graphic standards (owner's rules, 2026-08-26):
+   - 16px minimum for body text; 14px minimum for hints, captions and
+     compact UI labels. Nothing smaller anywhere.
+   - UPPERCASE is used ONLY for headers and primary buttons. Montserrat is
+     only ever set uppercase+bold (brand rule), so anything sentence-case
+     uses Lora instead.
+   ========================================================================== */
+
+:root{
+  /* ---- Boston primary palette ---- */
+  --charles:#091F2F;          /* Charles Blue — headers, dark contrast */
+  --charles-deep:#061622;     /* supporting dark */
+  --charles-mid:#0C2639;      /* supporting dark */
+  --optimistic:#1871bd;       /* Optimistic Blue — links, buttons, fills */
+  --optimistic-dark:#155FA0;  /* hover step; white on it = 6.6:1 */
+  --steel:#45789C;            /* supporting blue */
+  --sky:#51ACFF;              /* supporting blue — on dark only */
+  --freedom:#FB4D42;          /* Freedom Trail Red — use MINIMALLY */
+
+  /* Freedom Trail Red is only 3.36:1 on white, so it cannot carry BODY text.
+     This darker step clears 4.5:1 (5.46:1) and is used for error copy.
+     (Large display text ≥24px bold may use --freedom — 3:1 large-text rule.) */
+  --freedom-text:#C63024;
+
+  /* ---- Boston supporting greys ---- */
+  --grey-dark:#58585B;        /* muted text — 7.09:1 on white */
+  --grey-mid:#D2D2D2;
+  --line:#E0E0E0;
+  --paper:#F2F2F2;
+  --white:#FFFFFF;
+
+  --ink:var(--charles);
+  --muted:var(--grey-dark);
+  /* A lighter grey for hints and captions. 4.6:1 on white - still above the
+     4.5:1 floor, so it stays legible rather than merely decorative. */
+  --muted-soft:#6E7A85;
+
+  /* On the dark Charles Blue sidebar. */
+  --on-dark:#DCE5EC;
+  --on-dark-muted:#BFCAD3;
+
+  /* ---- Status (reserved meanings — never reused as category colours) ---- */
+  --ok:#1F7A4D;
+  --warn:#8A6412;
+
+  /* Pin / legend colours — must match PURPOSE_GROUPS[].hex in app.js. Pins
+     are coloured by the space's PURPOSE (since 2026-08-27); a multi-purpose
+     pin is striped with each of its colours.
+
+     Okabe-Ito based, with Produce and Gather darkened on 2026-08-27 after
+     simulating protan/deutan/tritan vision across all fifteen pairs: the old
+     Gather sat on top of the grey "no purpose" pin under deuteranopia, and
+     the old Produce was 2.25:1 against a light map. Every colour now clears
+     3:1 on white and the worst CVD pair is ΔE 12.0 (was 3.9). Do not change
+     these without re-running that simulation. */
+  --g-present:#1871bd;
+  --g-produce:#C77E00;
+  --g-learn:#009E73;
+  --g-gather:#A64D82;
+  --g-other:#58585B;
+  --g-unknown:#8A9199;
+
+  /* ---- Boston typography ----
+     Montserrat for headers and primary buttons, always UPPERCASE BOLD.
+     Lora for everything else. Fallbacks are Boston's own substitutions. */
+  --display:"Montserrat",Arial,Helvetica,sans-serif;
+  --body:"Lora",Georgia,"Times New Roman",serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+
+/* The browser hides [hidden] elements with `display:none`, but any rule that
+   sets `display` beats it on specificity — which silently un-hides them. This
+   keeps the hidden attribute authoritative. */
+[hidden]{display:none !important}
+
+body{font-family:var(--body);font-size:16px;color:var(--ink);background:var(--paper);display:flex;flex-direction:column;overflow:hidden}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--optimistic);outline-offset:2px}
+
+/* Montserrat is only ever set uppercase and bold, per the guidelines. */
+.u-display{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+
+/* ---------- Shared buttons ----------
+   .btn-cta  — PRIMARY: Montserrat uppercase bold, Optimistic Blue.
+   .btn-quiet — secondary: Lora, sentence case, deliberately low-key. */
+.btn-cta{display:inline-block;text-align:center;font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:14px;line-height:1.3;padding:12px 16px;border-radius:4px;background:var(--optimistic);border:1px solid var(--optimistic);color:var(--white);text-decoration:none;white-space:nowrap}
+.btn-cta:hover{background:var(--optimistic-dark);border-color:var(--optimistic-dark);color:var(--white)}
+.btn-quiet{font-family:var(--body);font-weight:600;font-size:14px;padding:9px 14px;border-radius:4px;border:1px solid var(--grey-mid);background:var(--white);color:var(--charles)}
+.btn-quiet:hover{border-color:var(--charles)}
+
+/* ---------- Setup banner (only while CONFIG has placeholders) ---------- */
+#setupBanner{background:#FFF4E5;border-bottom:1px solid #E8C99B;color:#6B4415;padding:10px 16px;font-size:14px;line-height:1.5}
+#setupBanner b{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#4A2E0C}
+#setupBanner code{background:#FBE8CC;padding:1px 5px;border-radius:3px;font-size:14px;font-family:ui-monospace,Menlo,Consolas,monospace}
+
+/* ---------- Layout: sidebar + map ---------- */
+#app{flex:1;display:flex;min-height:0}
+
+/* The sidebar is the page's identity: Charles Blue field with a Freedom Trail
+   Red rule on its map-side edge (the "minimal" red the guidelines ask for). */
+#sidebar{width:clamp(320px,25%,460px);flex-shrink:0;background:var(--charles);color:var(--on-dark);border-right:4px solid var(--freedom);padding:26px 22px 22px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#sidebar h1{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:27px;line-height:1.15;color:var(--white)}
+#sidebar .lede{margin-top:12px;font-size:16px;line-height:1.55;color:var(--on-dark-muted)}
+#sidebar h2{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:16px;color:var(--white);margin-top:26px;padding-top:16px;border-top:1px solid rgba(255,255,255,.18)}
+#sidebar p{font-size:16px;line-height:1.55;color:var(--on-dark-muted);margin-top:10px}
+#sidebar a:not(.btn-cta){color:var(--sky)}
+
+/* Numbered steps — used in the sidebar (dark) and the intro pop-up (light). */
+.steps{margin:12px 0 0;padding-left:0;list-style:none;counter-reset:step}
+.steps li{counter-increment:step;position:relative;padding-left:30px;margin-bottom:12px;font-size:16px;line-height:1.5}
+.steps li::before{content:counter(step);position:absolute;left:0;top:2px;width:20px;height:20px;border-radius:50%;background:var(--optimistic);color:var(--white);font-family:var(--display);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+#sidebar .steps li{color:var(--on-dark-muted)}
+#sidebar .steps li b{color:var(--white)}
+.steps li b{font-weight:700}
+
+#sidebar .btn-cta{display:block;margin-top:14px}
+.side-nav{margin-top:16px;display:flex;flex-direction:column;gap:10px}
+
+.contact{margin-top:24px;padding-top:16px;border-top:1px solid rgba(255,255,255,.18)}
+.contact p{font-size:14px;line-height:1.55;color:var(--on-dark-muted)}
+.contact p + p{margin-top:12px}
+.contact b{color:var(--on-dark)}
+.placeholder{font-style:italic;opacity:.75}
+
+/* ---------- Work-in-progress highlight ----------
+   Marks copy that is still being drafted, so it is obvious at a glance what
+   is not final yet. DELETE the class from the markup (not this rule) as each
+   piece is signed off. Deliberately loud: it must not survive to launch by
+   being easy to miss. The dark ink is set explicitly because this also sits
+   on the Charles Blue sidebar, where inherited text is near-white and would
+   be unreadable on yellow. */
+.wip,.contact .wip,.contact .wip b,.contact-block .wip,.contact-block .wip b{
+  background:#FFF3A3;color:var(--charles);
+}
+/* On the sidebar, `#sidebar p` (0,1,0,1 — an ID) outranks the plain class
+   rule above and would leave near-white text on yellow. Matching the ID
+   here is the fix; do NOT "simplify" these back to `.wip`. */
+#sidebar .wip,#sidebar .wip b,#sidebar .wip .placeholder{color:var(--charles)}
+.wip{box-shadow:0 0 0 3px #FFF3A3;border-radius:2px}
+.wip .placeholder{opacity:1}
+
+/* ---------- Space list (drops down from the count pill) ----------
+   Opened by the "536 spaces on record +" pill in the map's top-right corner;
+   a white panel with its own scrollbar, floating over the map. */
+.list-panel{width:min(330px,88vw);max-height:52vh;background:var(--white);border-radius:6px;box-shadow:0 6px 24px rgba(9,31,47,.3);overflow:hidden;display:flex;flex-direction:column}
+#assetList{overflow-y:auto;-webkit-overflow-scrolling:touch}
+.asset-item{width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--line);padding:11px 13px;display:flex;gap:10px;align-items:flex-start;font-family:var(--body)}
+.asset-item:last-child{border-bottom:none}
+.asset-item:hover{background:var(--paper)}
+.asset-item .dot{width:10px;height:10px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.asset-item .name{font-weight:700;font-size:16px;color:var(--charles);line-height:1.3;display:block}
+.asset-item .meta{font-size:14px;color:var(--muted);margin-top:2px;display:block;line-height:1.4}
+.stamp{display:inline-block;font-weight:600;font-size:14px;color:var(--ok);margin-left:6px}
+.empty-msg{padding:18px 14px;font-size:14px;color:var(--muted);line-height:1.55}
+
+/* ---------- Map ---------- */
+#mapWrap{flex:1;min-height:0;position:relative}
+#map{width:100%;height:100%}
+
+/* ---------- Embed build (embed.html, for an iframe on another site) --------
+   Same map, no sidebar and no intro pop-up. The map simply takes the whole
+   frame. On a phone the full site stacks the map above the sidebar at 54%
+   height — there is no sidebar here, so that rule must not apply or the map
+   would end up in the top half of the iframe with nothing beneath it. */
+body.embed #app{flex-direction:row}
+body.embed #mapWrap{flex:1 1 auto;width:100%;height:100%;min-height:0}
+@media (max-width:760px){
+  body.embed #mapWrap{flex:1 1 auto;min-height:0}
+}
+
+/* Google-Maps-style panel toggle: a tab on the sidebar/map seam that hides
+   the whole sidebar so the map fills the window. app.js flips body.map-only. */
+body.map-only #sidebar{display:none}
+/* Filled Optimistic Blue and sized up so the collapse control is clearly a
+   control, not a sliver of chrome (owner's request, 2026-08-27). */
+.side-toggle{position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:5;width:32px;height:72px;border:none;border-radius:0 8px 8px 0;background:var(--optimistic);color:var(--white);font-size:18px;font-weight:700;box-shadow:2px 0 8px rgba(9,31,47,.35);display:flex;align-items:center;justify-content:center;padding:0}
+.side-toggle:hover{background:var(--optimistic-dark)}
+.side-toggle .arrow{display:inline-block;transition:transform .2s ease;line-height:1}
+body.map-only .side-toggle .arrow{transform:rotate(180deg)}
+.map-error{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:32px;background:var(--paper);font-size:16px;line-height:1.6;color:var(--muted);z-index:6}
+.map-error b{display:block;font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:16px;color:var(--charles);margin-bottom:8px}
+
+/* Floating controls over the map, top-right. The Add button leads; Refresh
+   sits to its LEFT on the same row, deliberately quieter. */
+.map-controls{position:absolute;top:14px;right:14px;z-index:5;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.ctrl-row{display:flex;gap:8px;align-items:stretch}
+.refresh-ico{display:inline-block;font-size:16px;line-height:1;margin-right:3px;vertical-align:-1px}
+.map-controls .btn-cta,.map-controls .btn-quiet{box-shadow:0 2px 10px rgba(9,31,47,.28)}
+/* The count pill is a button: it opens the scrollable list of spaces. */
+.count-pill{font-family:var(--body);font-weight:600;font-size:14px;background:var(--white);border:none;padding:6px 6px 6px 12px;border-radius:999px;color:var(--charles);white-space:nowrap;box-shadow:0 2px 10px rgba(9,31,47,.28);display:flex;align-items:center;gap:8px;cursor:pointer}
+.count-pill:hover{background:var(--paper)}
+.count-pill .plus{font-family:var(--display);font-weight:700;font-size:14px;line-height:1;width:20px;height:20px;border-radius:50%;background:var(--optimistic);color:var(--white);display:flex;align-items:center;justify-content:center}
+
+/* Legend + filter chips over the map, bottom-right. Google's zoom buttons are
+   moved bottom-LEFT in initMap so the two never collide. */
+.map-legend{position:absolute;right:14px;bottom:30px;z-index:5;background:rgba(255,255,255,.96);border-radius:6px;padding:12px 14px;max-width:300px;box-shadow:0 2px 10px rgba(9,31,47,.28)}
+.legend-title{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:14px;color:var(--charles);margin-bottom:8px}
+.legend-hint{font-size:14px;color:var(--muted);line-height:1.45;margin-top:8px}
+
+.filters{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--body);font-weight:600;font-size:14px;border:1px solid var(--line);background:var(--white);border-radius:999px;padding:6px 11px;display:flex;align-items:center;gap:7px;color:var(--charles)}
+.chip:hover{border-color:var(--optimistic)}
+.chip .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+/* "Not recorded" — hollow, matching its hollow pin on the map. */
+.dot.hollow{background:transparent !important;border:2px solid;box-sizing:border-box}
+.chip.off{opacity:.38}
+
+/* The legend's purpose description, on hover and on keyboard focus. Positioned
+   by app.js relative to the chip and clamped inside the legend box. */
+.legend-tip{
+  position:absolute;z-index:6;max-width:270px;
+  background:var(--charles);color:var(--white);
+  font-family:var(--body);font-size:14px;line-height:1.45;
+  padding:9px 11px;border-radius:5px;
+  box-shadow:0 4px 16px rgba(9,31,47,.4);
+  pointer-events:none;   /* never steal the hover from the chip underneath */
+}
+
+/* Visible to screen readers only — carries the same description as the
+   tooltip, so it does not depend on a floating element being found. */
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+
+/* ---------- Modals (shared) ---------- */
+.modal-backdrop{position:fixed;inset:0;background:rgba(9,31,47,.6);display:none;align-items:center;justify-content:center;z-index:2000;padding:16px}
+.modal-backdrop.open{display:flex}
+.modal{background:var(--white);border-radius:6px;width:100%;max-width:552px;max-height:92vh;overflow-y:auto;box-shadow:0 18px 50px rgba(9,31,47,.35)}
+.modal-head{background:var(--charles);color:var(--white);padding:13px 16px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center;gap:10px;position:sticky;top:0;z-index:1;border-bottom:3px solid var(--freedom)}
+/* One size for every pop-up header — the add form, the correction form and
+   the thank-you modal all read at the same weight (owner's request). */
+.modal-head h3{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.055em;font-size:20px;line-height:1.25}
+.modal-head .close{background:none;border:none;color:#BFCAD3;font-size:24px;line-height:1;padding:2px 6px}
+.modal-head .close:hover{color:var(--white)}
+.modal-body{padding:16px}
+
+/* ---------- Intro pop-up ----------
+   ~70% of the screen, two columns per the content doc: the invitation (wide)
+   and "what is a cultural space" + photos (narrow, shaded). Closes from the
+   ×, a click on the backdrop, or Escape — all wired generically in app.js. */
+.intro-modal{position:relative;max-width:none;width:min(1100px,74vw);max-height:86vh;padding:34px 36px 30px}
+.intro-close{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--grey-dark);font-size:30px;line-height:1;padding:4px 8px;z-index:2}
+.intro-close:hover{color:var(--charles)}
+.intro-cols{display:grid;grid-template-columns:1.8fr 1fr;gap:32px;align-items:start}
+.intro-main h1{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:30px;line-height:1.15;color:var(--charles)}
+.intro-main p{font-size:16px;line-height:1.6;color:var(--ink);margin-top:12px}
+/* The main call to action. Freedom Trail Red is allowed here because display
+   text this large clears the 3:1 large-text contrast rule — do NOT reuse the
+   raw red on body-size text (use --freedom-text there). */
+.be-counted{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:28px;color:var(--freedom);margin-top:18px !important}
+.intro-main .steps li{color:var(--ink)}
+.intro-main a:not(.btn-cta){color:var(--optimistic);font-weight:600}
+/* Reads as a sub-heading, matching "There's three ways you can take part:"
+   above it — bold and full-strength ink, not muted. */
+.learn-more{color:var(--ink) !important}
+.intro-nav{display:flex;gap:12px;margin-top:14px;flex-wrap:wrap}
+/* A flex column so the photo carousel can be pushed to the BOTTOM of the bar
+   (margin-top:auto on .carousel below) — the padding gives it the same
+   margin underneath as the copy has above. */
+.intro-side{background:var(--paper);border-radius:6px;padding:20px;align-self:stretch;display:flex;flex-direction:column}
+.intro-side h2{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:16px;line-height:1.3;color:var(--charles)}
+.intro-side p{font-size:16px;line-height:1.55;color:var(--ink);margin-top:10px}
+
+/* Photo rotation — one image element; app.js swaps the src. */
+.carousel{margin-top:16px;border-radius:4px;overflow:hidden;aspect-ratio:4/3;background:var(--grey-mid)}
+/* In the intro bar only: sit at the bottom of the column, whatever the copy
+   above does. (Elsewhere the carousel just follows the text.) The gap above
+   comes from the last paragraph's margin — padding here would eat into the
+   aspect-ratio box (border-box) and leave a grey strip above the photo. */
+.intro-side .carousel{margin-top:auto;flex-shrink:0}
+.intro-side p:last-of-type{margin-bottom:16px}
+.carousel img{width:100%;height:100%;object-fit:cover;display:block;transition:opacity .45s ease}
+.carousel img.fading{opacity:0}
+
+/* Shown at the top of the form when correcting rather than adding. */
+.correcting-note{background:#FFF4E5;border-left:3px solid var(--warn);border-radius:0 4px 4px 0;padding:10px 12px;margin-bottom:16px;font-size:14px;line-height:1.5;color:#6B4415}
+.correcting-note b{font-weight:700;color:#4A2E0C}
+
+/* "This may already be on the map" — a warning, never a block. */
+.dup-warn{margin-top:9px;background:#FFF4E5;border:1px solid #E8C99B;border-radius:4px;padding:10px 11px;font-size:14px;line-height:1.45;color:#6B4415}
+.dup-warn b{display:block;font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:14px;color:#4A2E0C;margin-bottom:4px}
+.dup-warn p{margin-bottom:8px}
+.dup-hit{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:6px 0;border-top:1px solid #E8C99B}
+.dup-hit span{flex:1;min-width:0;color:#4A2E0C}
+.dup-use{flex-shrink:0;font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:14px;padding:6px 9px;border-radius:4px;border:1px solid var(--optimistic);background:var(--white);color:var(--optimistic)}
+.dup-use:hover{background:var(--optimistic);color:var(--white)}
+
+/* Numbered step headings inside the add form. */
+.form-section{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:18px;color:var(--optimistic);padding-bottom:6px;margin:4px 0 14px;border-bottom:2px solid var(--optimistic)}
+.form-section + .field{margin-top:0}
+h4.form-section:not(:first-child){margin-top:22px}
+
+/* Scrollable checkbox group for "select all that apply". A <select multiple>
+   is effectively unusable with a thumb, so this is a list of real checkboxes
+   with big tap targets. */
+.checklist{border:1px solid var(--grey-mid);border-radius:4px;max-height:210px;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--white)}
+.checklist.invalid{border-color:var(--freedom-text);background:#FDF4F3}
+/* An option, not a question label. `.field label` (specificity 0,2,0) sets
+   display:block and font-weight:700 on every label inside a field, which
+   outranked a plain `.check-row` (0,1,0) — so options rendered bold, and as
+   blocks, which left the flex `gap` with nothing to act on. Matching that
+   specificity is the fix. Do NOT simplify this back to `.check-row` alone. */
+.check-row,
+.field label.check-row{display:flex;align-items:flex-start;gap:14px;padding:10px 12px;margin-bottom:0;font-size:16px;font-weight:400;line-height:1.4;cursor:pointer;border-bottom:1px solid var(--paper);color:var(--ink)}
+.check-row:last-child{border-bottom:none}
+.check-row:hover{background:var(--paper)}
+.check-row input{margin-top:2px;width:16px;height:16px;flex-shrink:0;accent-color:var(--optimistic)}
+
+/* The pointer to the longer operator survey. */
+/* The deep-dive prompt shown after a submission saves. */
+.deep-modal{max-width:480px}
+.deep-lede{font-size:16px;line-height:1.55;color:var(--ink)}
+.deep-ask{font-size:16px;line-height:1.55;color:var(--muted);margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.deep-ask b{color:var(--ink)}
+.deep-modal .btn-cta{display:block;margin-top:16px}
+.deep-modal .btn-quiet{display:block;width:100%;margin-top:10px}
+
+/* The deep-dive pointer at the foot of a pin's pop-up. The question is a bold
+   standalone line so it reads as a heading (owner's request, 2026-08-27). */
+.pp-deep{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:14px;line-height:1.5;color:var(--muted)}
+.pp-deep b{display:block;color:var(--ink);font-size:15px;margin-bottom:3px}
+.pp-survey{display:block;margin-top:8px;text-align:center;font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:14px;padding:10px 6px;border-radius:4px;background:var(--optimistic);color:var(--white);text-decoration:none}
+.pp-survey:hover{background:var(--optimistic-dark);color:var(--white)}
+
+/* Form fields. Labels are sentence case (not headers), so they use Lora. */
+.field{margin-bottom:14px}
+.field label{display:block;font-family:var(--body);font-weight:700;font-size:16px;line-height:1.35;color:var(--charles);margin-bottom:5px}
+.field label .opt{font-weight:400;font-size:14px;font-style:italic;color:var(--muted)}
+.field label .req{color:var(--freedom-text)}
+.field input[type=text],.field select,.field textarea{width:100%;border:1px solid var(--grey-mid);border-radius:4px;padding:9px 10px;font-size:16px;font-family:var(--body);background:var(--white);color:var(--ink)}
+.field input[type=text]:focus,.field select:focus,.field textarea:focus{border-color:var(--optimistic)}
+.field textarea{min-height:74px;resize:vertical}
+.field .invalid{border-color:var(--freedom-text);background:#FDF4F3}
+.hint{font-size:14px;font-style:italic;color:var(--muted-soft);margin-top:5px;line-height:1.45}
+.err{font-family:var(--body);font-weight:700;font-size:14px;color:var(--freedom-text);margin-top:5px;line-height:1.4}
+.coords-box{font-size:14px;background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:8px 10px;color:var(--muted);margin-top:7px;line-height:1.4}
+.coords-box.set{color:var(--ink);border-color:var(--ok)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;padding:0 16px 16px}
+/* Cancel is secondary (sentence case); the save button is primary (uppercase). */
+.btn{font-family:var(--body);font-weight:600;border-radius:4px;padding:11px 16px;font-size:16px;border:1px solid var(--grey-mid);background:var(--white);color:var(--charles)}
+.btn:hover{border-color:var(--charles)}
+.btn.primary{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:14px;background:var(--optimistic);border-color:var(--optimistic);color:var(--white)}
+.btn.primary:hover{background:var(--optimistic-dark);border-color:var(--optimistic-dark)}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* Places Autocomplete web component — it renders its own input; give it room. */
+#pacHost{width:100%}
+#pacHost gmp-place-autocomplete{width:100%;display:block}
+
+/* ---------- Info window contents ---------- */
+.pp{min-width:280px;max-width:362px;font-family:var(--body);padding:6px 10px 8px}
+.pp-cat{font-family:var(--display);font-size:14px;letter-spacing:.07em;text-transform:uppercase;font-weight:700}
+.pp-name{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:16px;color:var(--charles);margin:3px 0 7px;line-height:1.25}
+/* Everything known about the space, as a two-column table. */
+.pp-details{margin-top:12px;width:100%;border-collapse:collapse;font-size:14px;line-height:1.45}
+.pp-details th,.pp-details td{text-align:left;vertical-align:top;padding:7px 0;border-top:1px solid var(--line)}
+.pp-details tr:first-child th,.pp-details tr:first-child td{border-top:none}
+.pp-details th{font-family:var(--body);font-weight:700;font-size:14px;color:var(--muted);width:40%;padding-right:10px}
+.pp-details td{color:var(--ink)}
+/* An unanswered field — visibly present, so it reads as a gap to fill rather
+   than as something the map chose not to mention. */
+.pp-unknown{color:var(--muted);font-style:italic;opacity:.8}
+.pp-meta{font-size:14px;color:var(--muted);margin-top:7px;line-height:1.45}
+.pp-valid{margin-top:9px;padding-top:9px;border-top:1px solid var(--line);font-size:14px;color:var(--ink)}
+.pp-valid .vcount{font-family:var(--display);font-weight:700;color:var(--ok)}
+.pp-notes{margin-top:6px;max-height:120px;overflow-y:auto}
+.pp-note{font-size:14px;background:var(--paper);border-left:3px solid var(--grey-mid);padding:6px 8px;margin-top:5px;border-radius:0 3px 3px 0;line-height:1.45}
+.pp-note.correction{border-left-color:var(--freedom)}
+.pp-note.additional_info{border-left-color:var(--optimistic)}
+.pp-note .who{color:var(--muted);font-size:14px;display:block;margin-top:3px;font-style:italic}
+.pp-actions{display:flex;gap:6px;margin-top:11px}
+.pp-actions button{flex:1;font-size:14px;padding:9px 6px;border-radius:4px;line-height:1.3}
+/* Confirm is the primary action here (uppercase); the correction path is
+   secondary (sentence case). */
+.pp-confirm{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.03em;border:1px solid var(--ok);background:var(--white);color:var(--ok)}
+.pp-confirm:hover{background:#EDF5F0}
+.pp-confirm:disabled{opacity:.55;cursor:default}
+.pp-note-btn{font-family:var(--body);font-weight:600;border:1px solid var(--charles);background:var(--white);color:var(--charles)}
+.pp-note-btn:hover{background:var(--paper)}
+
+/* Google's info window adds its own padding; trim the default gutter. */
+.gm-style-iw-d{overflow:auto !important}
+
+/* ---------- Toast ---------- */
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--charles);color:var(--white);font-family:var(--body);font-size:16px;padding:12px 18px;border-radius:4px;border-left:4px solid var(--freedom);z-index:3000;display:none;max-width:90vw;text-align:center;box-shadow:0 6px 20px rgba(9,31,47,.35);line-height:1.45}
+.toast.show{display:block}
+
+/* ==========================================================================
+   About / FAQ pages (about.html, faq.html)
+   Static articles sharing this stylesheet. <body class="page"> overrides the
+   app shell's flex + overflow:hidden so these pages scroll normally.
+   ========================================================================== */
+body.page{display:block;overflow:auto;background:var(--white)}
+.page-head{background:var(--charles);border-bottom:4px solid var(--freedom);padding:18px 20px}
+.page-head-inner{max-width:780px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.page-head .site-name{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:16px;color:var(--white);text-decoration:none}
+.page-head .site-name:hover{color:var(--sky)}
+.back-link{font-family:var(--body);font-weight:600;font-size:14px;color:var(--on-dark-muted);text-decoration:none;border:1px solid rgba(255,255,255,.4);border-radius:4px;padding:7px 12px}
+.back-link:hover{background:rgba(255,255,255,.14);color:var(--white)}
+.page main{max-width:780px;margin:0 auto;padding:36px 20px 60px}
+.page main h1{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:30px;line-height:1.15;color:var(--charles)}
+.page .subtitle{font-size:18px;font-style:italic;color:var(--muted);margin-top:8px;line-height:1.4}
+.page main h2{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:18px;line-height:1.3;color:var(--charles);margin-top:34px;padding-top:20px;border-top:1px solid var(--line)}
+.page main p{font-size:16px;line-height:1.65;color:var(--ink);margin-top:12px}
+.page main ul{margin:12px 0 0 22px}
+.page main li{font-size:16px;line-height:1.65;color:var(--ink);margin-bottom:6px}
+.page main a:not(.btn-cta){color:var(--optimistic);font-weight:600}
+.page .btn-cta{margin-top:16px}
+.page .carousel{max-width:560px}
+/* Three photos side by side on the About page. Each frame is a .carousel, so
+   they keep the shared 4/3 box and fade transition; the row just lays them
+   out. Stacks to one column on a narrow screen, where three would be too
+   small to read. */
+.carousel-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+.carousel-row .carousel{margin-top:0;max-width:none}
+@media (max-width:620px){.carousel-row{grid-template-columns:1fr}}
+.page .contact-block{margin-top:34px;padding:18px 20px;background:var(--paper);border-left:3px solid var(--optimistic);border-radius:0 4px 4px 0}
+.page .contact-block p{margin-top:0;font-size:14px;line-height:1.6}
+.page .contact-block p + p{margin-top:10px}
+
+/* ---------- Phone layout (tested at 375px wide) ---------- */
+@media (max-width:760px){
+  #app{flex-direction:column}
+
+  /* Map on top, sidebar below it as one single scroll region. Sized as shares
+     of #app, not vh — vh would include any banner and overflow the screen. */
+  #mapWrap{order:1;flex:0 0 54%;min-height:220px}
+  #sidebar{order:2;flex:1 1 auto;width:100%;border-right:none;border-top:4px solid var(--freedom);padding:20px 18px}
+  #sidebar h1{font-size:22px}
+
+  .map-controls{top:10px;right:10px;gap:6px}
+  .map-controls .btn-cta{padding:10px 13px}
+  .list-panel{max-height:38vh}   /* leave map visible behind the open list */
+  .map-legend{right:10px;bottom:26px;max-width:75%;padding:10px 12px}
+  .legend-hint{display:none}   /* the sidebar explains the pins; save map room */
+
+  /* The collapse tab flips to vertical: the sidebar is BELOW the map on a
+     phone, so it tucks down/up instead of left/right. */
+  .side-toggle{left:50%;top:auto;bottom:0;transform:translateX(-50%);width:52px;height:24px;border-radius:6px 6px 0 0;box-shadow:0 -2px 8px rgba(9,31,47,.25)}
+  .side-toggle .arrow{transform:rotate(-90deg)}
+  body.map-only .side-toggle .arrow{transform:rotate(90deg)}
+
+  .intro-modal{width:100%;max-height:94vh;padding:22px 18px}
+  .intro-cols{grid-template-columns:1fr;gap:20px}
+  .intro-main h1{font-size:22px;padding-right:30px}
+  .be-counted{font-size:24px}
+
+  .modal-backdrop{padding:0;align-items:flex-end}
+  .modal-backdrop#introModal{align-items:center;padding:10px}
+  .modal{max-width:none;max-height:94vh;border-radius:8px 8px 0 0}
+  .modal-head{border-radius:8px 8px 0 0}
+  .intro-modal{border-radius:8px}
+  .modal-actions{padding:0 16px 20px}
+  .modal-actions .btn{flex:1}
+}
+
+/* "This space is outside the City of Boston" — a note, not a warning. The map
+   deliberately accepts spaces just over the line in Cambridge, Somerville and
+   Brookline, so this is informational and styled well short of an error. */
+.outside-note{
+  margin-top:9px;background:var(--paper);border-left:3px solid var(--steel);
+  border-radius:0 4px 4px 0;padding:10px 12px;font-size:14px;line-height:1.5;
+  color:var(--ink);
+}
+
+/* Intro line under a form-section heading. */
+.section-lede{font-size:15px;font-style:italic;line-height:1.6;color:var(--muted-soft);margin:-4px 0 18px}
+
+/* A single checkbox asked on its own, outside a .checklist group. */
+.check-row.standalone{border:1px solid var(--grey-mid);border-radius:4px;background:var(--white)}
+.check-row.standalone:hover{border-color:var(--optimistic);background:var(--white)}
+
+/* A second lede paragraph in the same section keeps a full paragraph gap. */
+.section-lede + .section-lede{margin-top:0}
