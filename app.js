@@ -357,6 +357,12 @@ const CLOSURE_LABELS = {
   let draftLocation = null;    // { lat, lng }
   let draftPlaceId = "";       // Google place_id, when added via search
   let correctingId = null;     // asset being corrected, or null when adding new
+  // Retry guard: one random key per filled-in form, sent with the save. If
+  // Google answers slowly with an error AFTER saving, pressing the button
+  // again returns the same row instead of adding a duplicate. A new key is
+  // made whenever the answers change (so an edited resubmission is saved).
+  let submissionKey = null;
+  let submissionKeyFor = "";
   let demoMode = false;        // true when APPS_SCRIPT_URL is not configured
 
   /* ======================================================================
@@ -693,6 +699,12 @@ const CLOSURE_LABELS = {
     });
     if (!res.ok) throw new Error("Request failed (" + res.status + ")");
     return parseApiResponse(await res.text());
+  }
+
+  // True for a timeout / network failure (Google's 404 when slow, a dropped
+  // connection) — as opposed to the server answering and rejecting the data.
+  function isSlowServerError(err) {
+    return /Request failed|Failed to fetch|NetworkError|Load failed/i.test((err && err.message) || "");
   }
 
   function parseApiResponse(text) {
@@ -1178,6 +1190,70 @@ const CLOSURE_LABELS = {
     openStackList();
   }
 
+  /* ----------------------------------------------------------------------
+     Where a pin's pop-up is shown (owner's request, 2026-09-28)
+     ----------------------------------------------------------------------
+     On a computer: Google's usual bubble, pointing at the pin.
+     On a phone (760px wide or less): a FULL-SCREEN panel instead. The map is
+     only the top half of a phone screen, so Google's bubble was squeezed
+     into a small box that had to be scrolled to read. The panel shows the
+     exact same content, with a × and a "Back to map" button to close it.
+     The panel is created here in JS, so index.html and embed.html need no
+     extra markup. (The small "Add a space here?" bubble stays a bubble.) */
+  function isPhoneLayout() {
+    return window.matchMedia("(max-width:760px)").matches;
+  }
+
+  function pinSheet() {
+    let sheet = $("pinSheet");
+    if (sheet) return sheet;
+    sheet = document.createElement("div");
+    sheet.id = "pinSheet";
+    sheet.className = "pin-sheet";
+    sheet.hidden = true;
+    sheet.setAttribute("role", "dialog");
+    sheet.setAttribute("aria-modal", "true");
+    sheet.setAttribute("aria-label", "Space details");
+    sheet.innerHTML =
+      '<div class="pin-sheet-head">' +
+        '<button type="button" class="pin-sheet-back">‹ Back to map</button>' +
+        '<button type="button" class="pin-sheet-close" aria-label="Close">×</button>' +
+      "</div>" +
+      '<div class="pin-sheet-body"></div>';
+    sheet.querySelector(".pin-sheet-back").addEventListener("click", closePinSheet);
+    sheet.querySelector(".pin-sheet-close").addEventListener("click", closePinSheet);
+    document.body.appendChild(sheet);
+    return sheet;
+  }
+
+  function closePinSheet() {
+    const sheet = $("pinSheet");
+    if (sheet) sheet.hidden = true;
+  }
+
+  // Show a pop-up's content: full-screen panel on a phone, bubble otherwise.
+  function showPopup(div, anchorId, pos) {
+    if (isPhoneLayout()) {
+      infoWindow.close();
+      const sheet = pinSheet();
+      const body = sheet.querySelector(".pin-sheet-body");
+      body.innerHTML = "";
+      body.appendChild(div);
+      body.scrollTop = 0;
+      sheet.hidden = false;
+      return;
+    }
+    closePinSheet();
+    infoWindow.setContent(div);
+    const marker = markers[anchorId];
+    if (marker) {
+      infoWindow.open({ map: map, anchor: marker });
+    } else {
+      infoWindow.setPosition(pos);
+      infoWindow.open({ map: map });
+    }
+  }
+
   function openStackList() {
     const ids = currentStack.ids;
     const div = document.createElement("div");
@@ -1201,15 +1277,8 @@ const CLOSURE_LABELS = {
     });
     div.appendChild(list);
 
-    infoWindow.setContent(div);
-    const marker = markers[currentStack.anchorId];
-    if (marker) {
-      infoWindow.open({ map: map, anchor: marker });
-    } else {
-      const s = assets.find((x) => x.space_id === currentStack.anchorId);
-      infoWindow.setPosition({ lat: s.lat, lng: s.long });
-      infoWindow.open({ map: map });
-    }
+    const s = assets.find((x) => x.space_id === currentStack.anchorId);
+    showPopup(div, currentStack.anchorId, s ? { lat: s.lat, lng: s.long } : null);
   }
 
   // The scrollable list that drops down from the count pill. Follows the same
@@ -1396,7 +1465,12 @@ const CLOSURE_LABELS = {
         (confirmed
           ? '<button class="pp-confirm" type="button" disabled>✓ You confirmed this</button>'
           : '<button class="pp-confirm" type="button">✓ Confirm it\'s correct</button>') +
-        '<button class="pp-note-btn" type="button">Suggest a correction</button>' +
+        // Pencil icon (inline SVG, so it looks the same on every phone —
+        // the ✎ character turns into a coloured emoji on some).
+        '<button class="pp-note-btn" type="button">' +
+          '<svg class="pp-pencil" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">' +
+            '<path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.21a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>' +
+          "</svg> Suggest a correction</button>" +
       "</div>" +
       // "Doesn't belong" — a quiet link-style button, then a short reason
       // box that opens in place. One per browser per space.
@@ -1467,14 +1541,7 @@ const CLOSURE_LABELS = {
       div.insertBefore(back, div.firstChild);
     }
 
-    infoWindow.setContent(div);
-    const marker = markers[a.space_id];
-    if (marker) {
-      infoWindow.open({ map: map, anchor: marker });
-    } else {
-      infoWindow.setPosition({ lat: a.lat, lng: a.long });
-      infoWindow.open({ map: map });
-    }
+    showPopup(div, a.space_id, { lat: a.lat, lng: a.long });
   }
 
   /* ======================================================================
@@ -1868,11 +1935,13 @@ const CLOSURE_LABELS = {
       "The street address as currently recorded. If it's wrong, type the right one and pick it from the list — the pin moves to match.";
 
     infoWindow.close();
+    closePinSheet();
     openAddForm();
   }
 
   function resetAddForm() {
     correctingId = null;
+    submissionKey = null;
     ["fName", "fTypeOther", "fPurposeOther", "fAddr", "fClosureYear",
      "fSubName", "fSubEmail", "fSubAffil"].forEach((id) => { $(id).value = ""; });
     ["fLocIn", "fPrimary", "fClosed", "fConnection"].forEach((id) => { $(id).selectedIndex = 0; });
@@ -2417,7 +2486,25 @@ const CLOSURE_LABELS = {
         DEMO_ASSETS.push(saved);
         assets = DEMO_ASSETS.slice();
       } else {
-        const data = await apiPost("addSpace", payload);
+        const answers = snapshotForm() + "|" + (correctingId || "") + "|" + payload.lat + "," + payload.long;
+        if (!submissionKey || submissionKeyFor !== answers) {
+          submissionKey = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+          submissionKeyFor = answers;
+        }
+        payload.submission_key = submissionKey;
+        /* One automatic retry when Google is slow (it answers 404 past
+           ~30 s, often AFTER the save has gone through). The submission key
+           makes the retry safe: if the first attempt saved, the server hands
+           back that same row instead of writing a second one. */
+        let data;
+        try {
+          data = await apiPost("addSpace", payload);
+        } catch (firstErr) {
+          if (!isSlowServerError(firstErr)) throw firstErr;
+          console.warn("addSpace failed once, retrying with the same key:", firstErr);
+          btn.textContent = "Still saving…";
+          data = await apiPost("addSpace", payload);
+        }
         saved = data.space;
         if (wasCorrection) {
           // A correction is a separate row that the server folds back into the
@@ -2472,8 +2559,15 @@ const CLOSURE_LABELS = {
       }
     } catch (err) {
       console.error(err);
-      showError(null, "errLocation", err.message || "Couldn't save that. Please try again.");
-      toast(err.message || "Couldn't save. Please try again.", 5000);
+      // A timeout / network error (as opposed to the server rejecting the
+      // answers) may have happened AFTER the save. Say so plainly — the
+      // retry guard above means pressing the button again is always safe.
+      const msg = isSlowServerError(err)
+        ? "The server took too long to answer, so your submission may already be saved. " +
+          "Please press the button again — it won't create a duplicate."
+        : (err.message || "Couldn't save that. Please try again.");
+      showError(null, "errLocation", msg);
+      toast(msg, 8000);
     } finally {
       btn.disabled = false;
       btn.textContent = wasCorrection ? "Submit correction" : "Add to the map";
@@ -2556,8 +2650,17 @@ const CLOSURE_LABELS = {
     });
 
     document.querySelectorAll(".modal-backdrop").forEach((bd) => {
+      // A click only counts as "outside the box" if the press STARTED on the
+      // backdrop too. Selecting text inside the form and letting go of the
+      // mouse past its edge fires a click on the backdrop — which used to ask
+      // "Are you sure you want to exit?" mid-selection (owner's report,
+      // 2026-09-28).
+      let downOnBackdrop = false;
+      bd.addEventListener("pointerdown", (e) => { downOnBackdrop = (e.target === bd); });
       bd.addEventListener("click", (e) => {
         if (e.target !== bd) return;          // a click INSIDE the box, ignore
+        if (!downOnBackdrop) return;          // a drag that began inside, ignore
+        downOnBackdrop = false;
         if (!confirmDiscard(bd.id)) return;
         bd.classList.remove("open");
         if (bd.id === "addModal") resetAddForm();
@@ -2566,6 +2669,7 @@ const CLOSURE_LABELS = {
 
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
+      closePinSheet();
       document.querySelectorAll(".modal-backdrop.open").forEach((bd) => {
         if (!confirmDiscard(bd.id)) return;
         bd.classList.remove("open");
