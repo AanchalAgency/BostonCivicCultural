@@ -31,7 +31,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap">
-<link rel="stylesheet" href="styles.css?v=34">
+<link rel="stylesheet" href="styles.css?v=43">
 </head>
 <body class="embed">
 
@@ -62,10 +62,25 @@
 
     <!-- Legend + filter chips, bottom-right of the map. -->
     <div class="map-legend" id="mapLegend">
-      <div class="legend-title">Legend</div>
+      <!-- The (i) opens a panel explaining every category. Same markup as
+           index.html — app.js fills it. -->
+      <div class="legend-head">
+        <div class="legend-title">Legend</div>
+        <div class="legend-head-btns">
+          <button class="legend-info-btn" id="legendInfoBtn" type="button" aria-expanded="false" aria-controls="legendInfo" title="What do these categories mean?" aria-label="What do these categories mean?">i</button>
+          <button class="legend-hide-btn" id="legendHideBtn" type="button" title="Hide the legend to see more of the map">Hide</button>
+        </div>
+      </div>
+      <div class="legend-info" id="legendInfo" hidden></div>
       <div class="filters" id="filters" aria-label="Filter the pins by the space's purpose"></div>
-      <div class="legend-hint">Pins are colored by the space's purpose &mdash; a pin with two colors has more than one. Hover a purpose to see what it means; tap a color to hide or show those pins.</div>
+      <div class="legend-hint">Pins are colored by the space's purpose &mdash; a pin with two colors has more than one. Closed spaces are navy squares. Where pins overlap, clicking one lists every space at that spot. Tap a category to hide or show its pins.</div>
     </div>
+
+    <!-- Brings the legend back once it has been hidden (see legendHideBtn). -->
+    <button class="legend-show" id="legendShowBtn" type="button" hidden aria-controls="mapLegend">Legend</button>
+
+    <!-- Centred "loading" note while the spaces load. Same as index.html. -->
+    <div class="map-loading" id="mapLoading" role="status" aria-live="polite" hidden><span class="spinner" aria-hidden="true"></span>Loading spaces&hellip;</div>
 
     <div id="mapError" class="map-error" hidden></div>
   </div>
@@ -96,7 +111,7 @@
           <label for="pacHost">Search for the space</label>
           <!-- The Google Places Autocomplete element is inserted here by app.js -->
           <div id="pacHost"></div>
-          <div class="hint">Search by organization or venue name (e.g. "Hibernian Hall") or a street address. Don't see the space listed? Close this form, and drop a pin to restart the survey with a new location.</div>
+          <div class="hint">Search by organization or venue name (e.g., "Hibernian Hall") or a street address. Don't see the space listed? Close this form and click the exact spot on the map instead.</div>
         </div>
         <div class="err" id="errLocation" hidden></div>
         <!-- Set by app.js when the pin falls outside the city outline. A note,
@@ -116,9 +131,18 @@
 
       <div class="field">
         <label for="fAddr">Where is the space located?</label>
-        <input type="text" id="fAddr" maxlength="200" autocomplete="off">
+        <!-- Address lookup (added 2026-09-28): typing suggests real street
+             addresses from Google; picking one fills the street + zip and
+             MOVES THE PIN there. Free typing is still allowed, but it is
+             checked on submit (see checkTypedAddress in app.js). -->
+        <div class="addr-wrap">
+          <input type="text" id="fAddr" maxlength="200" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="addrSuggest">
+          <div class="addr-suggest" id="addrSuggest" role="listbox" aria-label="Address suggestions" hidden></div>
+        </div>
         <!-- Wording swaps in app.js depending on how the location was set. -->
-        <div class="hint" id="addrHint">Filled in automatically from your search or map pin — edit it if it looks wrong.</div>
+        <div class="hint" id="addrHint">Filled in automatically from your search or map pin. To change it, start typing and pick the address from the list &mdash; the pin moves to match.</div>
+        <!-- "We couldn't find that address" — a warning, never a block. -->
+        <div class="addr-warn" id="addrWarn" hidden></div>
       </div>
 
       <div class="field">
@@ -126,10 +150,10 @@
         <select id="fLocIn"></select>
       </div>
 
-      <h4 class="form-section">2. About the Space</h4>
+      <h4 class="form-section">2. Share more about the space</h4>
 
       <div class="field">
-        <label id="purposeLabel">What is the main purpose of this cultural space &mdash; the thing the space is most often used for? <span class="opt">(select all that apply)</span></label>
+        <label id="purposeLabel">What is the main purpose of this cultural space (the thing the space is most often used for)? <span class="opt">(select all that apply)</span></label>
         <div class="checklist" id="purposeList" role="group" aria-labelledby="purposeLabel"></div>
       </div>
 
@@ -152,9 +176,8 @@
       </div>
 
       <div class="field">
-        <label for="fPrimary">Is this space primarily used for arts and cultural activities, or only sometimes?</label>
+        <label for="fPrimary">Is this space primarily used for arts and cultural activities (a dedicated space like an arts studio or theatre), or does the space only host arts and culture activity occasionally (like a restaurant, event space or park that sometimes hosts live music)?</label>
         <select id="fPrimary"></select>
-        <div class="hint"><b>Most of the time</b> &mdash; most days of the week there is some kind of arts or cultural activity happening, like an arts studio or theatre. <b>Some of the time</b> &mdash; some days of the week or month, like a restaurant or park that sometimes hosts live music.</div>
       </div>
 
       <div class="field">
@@ -168,16 +191,18 @@
         <div class="err" id="errClosureYear" hidden></div>
       </div>
 
-      <h4 class="form-section">3. About You (Optional)</h4>
-
+      <!-- The survey doc (2026-09-28) moves the connection question into
+           section 2; section 3 is contact details only. -->
       <div class="field">
         <label for="fConnection">How are you connected to this space?</label>
         <select id="fConnection"></select>
       </div>
 
+      <h4 class="form-section">3. About you</h4>
+
       <p class="section-lede">If you would like to stay updated about this project, or be part of future conversations about cultural space in Boston, please provide your contact information below.</p>
 
-      <p class="section-lede">Your name, email, and affiliation will not be shared publicly or on this map. The City will only get in touch if you tick the box below.</p>
+      <p class="section-lede">This information may be used to get in touch with you about the spaces you've added to the map, or to share project updates and other feedback opportunities with you.</p>
 
       <div class="field">
         <label for="fSubName">Name</label>
@@ -198,10 +223,23 @@
       <div class="field">
         <label class="check-row standalone" for="fContactConsent">
           <input type="checkbox" id="fContactConsent">
-          <span>The City can contact me to learn more about the space I added to the map</span>
+          <span>The City can contact me to learn more about this cultural space</span>
         </label>
       </div>
 
+      <!-- Separate consent, stored in its own column (updates_consent, added
+           2026-09-28): the one above only covers questions about the space. -->
+      <div class="field">
+        <label class="check-row standalone" for="fUpdatesConsent">
+          <input type="checkbox" id="fUpdatesConsent">
+          <span>The City can send me project updates and other feedback opportunities</span>
+        </label>
+      </div>
+
+      <!-- The deep-dive link itself is NOT in the form: the space only gets
+           its id when the Sheet saves it, and the id is what ties deep-dive
+           answers to the pin. The thank-you pop-up carries that link. -->
+      <p class="deep-note"><b>Are you someone who knows a lot about this space (an owner, operator, staff or volunteer member)?</b> Once you add it to the map, you'll get a link to our deep-dive questions, already tied to this space.</p>
 
     </div>
     <div class="modal-actions">
@@ -235,6 +273,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="app.js?v=34"></script>
+<script src="app.js?v=43"></script>
 </body>
 </html>

@@ -42,9 +42,10 @@
 
   --ink:var(--charles);
   --muted:var(--grey-dark);
-  /* A lighter grey for hints and captions. 4.6:1 on white - still above the
-     4.5:1 floor, so it stays legible rather than merely decorative. */
-  --muted-soft:#6E7A85;
+  /* A lighter grey for hints and captions: 5.1:1 on white, above the 4.5:1
+     floor with margin. It was #6E7A85 until 2026-09-28 — this comment
+     claimed 4.6:1, but it actually measured 4.39:1 (owner's check). */
+  --muted-soft:#636F7A;
 
   /* On the dark Charles Blue sidebar. */
   --on-dark:#DCE5EC;
@@ -132,8 +133,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .contact{margin-top:24px;padding-top:16px;border-top:1px solid rgba(255,255,255,.18)}
 .contact p{font-size:14px;line-height:1.55;color:var(--on-dark-muted)}
 .contact p + p{margin-top:12px}
-.contact b{color:var(--on-dark)}
 .placeholder{font-style:italic;opacity:.75}
+/* Contact email links (sidebar, about.html, faq.html), each led by a small
+   envelope icon drawn inline so it takes the link's own colour. */
+.mail-link{display:inline-flex;align-items:center;gap:6px;margin-top:4px;font-weight:600;text-decoration:none;word-break:break-all}
+.mail-link:hover{text-decoration:underline}
+.mail-ico{width:16px;height:16px;flex-shrink:0}
+/* The sidebar's photo rotation (added 2026-09-28) sits under the About/FAQ
+   buttons. */
+.side-carousel{margin-top:20px}
 
 /* ---------- Work-in-progress highlight ----------
    Marks copy that is still being drafted, so it is obvious at a glance what
@@ -207,30 +215,53 @@ body.map-only .side-toggle .arrow{transform:rotate(180deg)}
 /* Legend + filter chips over the map, bottom-right. Google's zoom buttons are
    moved bottom-LEFT in initMap so the two never collide. */
 .map-legend{position:absolute;right:14px;bottom:30px;z-index:5;background:rgba(255,255,255,.96);border-radius:6px;padding:12px 14px;max-width:300px;box-shadow:0 2px 10px rgba(9,31,47,.28)}
-.legend-title{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:14px;color:var(--charles);margin-bottom:8px}
+.legend-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.legend-title{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:14px;color:var(--charles)}
+/* The (i) beside "Legend": opens the panel explaining each category. A
+   24px circle, outlined until the panel is open. */
+.legend-info-btn{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--optimistic);background:var(--white);color:var(--optimistic);font-family:Georgia,var(--body);font-style:italic;font-weight:700;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
+.legend-info-btn:hover,.legend-info-btn.on{background:var(--optimistic);color:var(--white)}
+/* Hide / show the whole legend (owner's request, 2026-09-28), so the map
+   can be seen full-screen. "Hide" is a quiet sentence-case text button in the
+   legend's header; once hidden, a small "Legend" pill in the same corner
+   brings it back. */
+.legend-head-btns{display:flex;align-items:center;gap:8px}
+.legend-hide-btn{background:none;border:none;padding:2px 2px;font-family:var(--body);font-weight:600;font-size:14px;color:var(--muted);text-decoration:underline;text-underline-offset:2px}
+.legend-hide-btn:hover{color:var(--charles)}
+.legend-show{position:absolute;right:14px;bottom:30px;z-index:5;font-family:var(--body);font-weight:600;font-size:14px;color:var(--charles);background:var(--white);border:1px solid var(--line);border-radius:999px;padding:8px 14px;box-shadow:0 2px 10px rgba(9,31,47,.28)}
+.legend-show:hover{border-color:var(--optimistic)}
+@media (max-width:760px){.legend-show{right:10px;bottom:26px}}
+.legend-info{max-height:40vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin-bottom:10px;padding:8px 10px;background:var(--paper);border-radius:4px;font-size:14px;line-height:1.45;color:var(--ink)}
+.legend-info-row{display:flex;gap:8px;align-items:flex-start}
+.legend-info-row + .legend-info-row{margin-top:8px}
+.legend-info-row .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.legend-info-row b{color:var(--charles)}
 .legend-hint{font-size:14px;color:var(--muted);line-height:1.45;margin-top:8px}
 
 .filters{display:flex;flex-wrap:wrap;gap:6px}
 .chip{font-family:var(--body);font-weight:600;font-size:14px;border:1px solid var(--line);background:var(--white);border-radius:999px;padding:6px 11px;display:flex;align-items:center;gap:7px;color:var(--charles)}
 .chip:hover{border-color:var(--optimistic)}
 .chip .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-/* "Not recorded" — hollow, matching its hollow pin on the map. */
+/* "Currently unknown" — hollow, matching its hollow pin on the map. */
 .dot.hollow{background:transparent !important;border:2px solid;box-sizing:border-box}
+/* "Closed" — a small navy square with a white X, matching the closed pin.
+   The doubled selectors outrank `.chip .dot` / `.asset-item .dot`, which
+   would otherwise round it into a circle. */
+.dot.closed-dot,.chip .dot.closed-dot,.asset-item .dot.closed-dot,.legend-info-row .dot.closed-dot{
+  width:12px;height:12px;border-radius:2px;position:relative;
+  background-image:linear-gradient(45deg,transparent 43%,#fff 43%,#fff 57%,transparent 57%),
+                   linear-gradient(-45deg,transparent 43%,#fff 43%,#fff 57%,transparent 57%);
+}
 .chip.off{opacity:.38}
 
-/* The legend's purpose description, on hover and on keyboard focus. Positioned
-   by app.js relative to the chip and clamped inside the legend box. */
-.legend-tip{
-  position:absolute;z-index:6;max-width:270px;
-  background:var(--charles);color:var(--white);
-  font-family:var(--body);font-size:14px;line-height:1.45;
-  padding:9px 11px;border-radius:5px;
-  box-shadow:0 4px 16px rgba(9,31,47,.4);
-  pointer-events:none;   /* never steal the hover from the chip underneath */
-}
+/* Centred "Loading spaces…" note over the map while pins load. Clicks pass
+   straight through it, so the map is never blocked. */
+.map-loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:4;display:flex;align-items:center;gap:12px;background:var(--white);color:var(--charles);font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:16px;padding:16px 22px;border-radius:6px;box-shadow:0 6px 24px rgba(9,31,47,.3);pointer-events:none}
+.spinner{width:22px;height:22px;border-radius:50%;border:3px solid var(--grey-mid);border-top-color:var(--optimistic);animation:bcam-spin .9s linear infinite}
+@keyframes bcam-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation-duration:2.5s}}
 
-/* Visible to screen readers only — carries the same description as the
-   tooltip, so it does not depend on a floating element being found. */
+/* Visible to screen readers only. */
 .sr-only{
   position:absolute;width:1px;height:1px;padding:0;margin:-1px;
   overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
@@ -239,7 +270,7 @@ body.map-only .side-toggle .arrow{transform:rotate(180deg)}
 /* ---------- Modals (shared) ---------- */
 .modal-backdrop{position:fixed;inset:0;background:rgba(9,31,47,.6);display:none;align-items:center;justify-content:center;z-index:2000;padding:16px}
 .modal-backdrop.open{display:flex}
-.modal{background:var(--white);border-radius:6px;width:100%;max-width:552px;max-height:92vh;overflow-y:auto;box-shadow:0 18px 50px rgba(9,31,47,.35)}
+.modal{background:var(--white);border-radius:6px;width:100%;max-width:552px;max-height:92vh;max-height:92dvh;overflow-y:auto;box-shadow:0 18px 50px rgba(9,31,47,.35)}
 .modal-head{background:var(--charles);color:var(--white);padding:13px 16px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center;gap:10px;position:sticky;top:0;z-index:1;border-bottom:3px solid var(--freedom)}
 /* One size for every pop-up header — the add form, the correction form and
    the thank-you modal all read at the same weight (owner's request). */
@@ -252,7 +283,7 @@ body.map-only .side-toggle .arrow{transform:rotate(180deg)}
    ~70% of the screen, two columns per the content doc: the invitation (wide)
    and "what is a cultural space" + photos (narrow, shaded). Closes from the
    ×, a click on the backdrop, or Escape — all wired generically in app.js. */
-.intro-modal{position:relative;max-width:none;width:min(1100px,74vw);max-height:86vh;padding:34px 36px 30px}
+.intro-modal{position:relative;max-width:none;width:min(1100px,74vw);max-height:86vh;max-height:86dvh;padding:34px 36px 30px}
 .intro-close{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--grey-dark);font-size:30px;line-height:1;padding:4px 8px;z-index:2}
 .intro-close:hover{color:var(--charles)}
 .intro-cols{display:grid;grid-template-columns:1.8fr 1fr;gap:32px;align-items:start}
@@ -392,6 +423,48 @@ h4.form-section:not(:first-child){margin-top:22px}
 .pp-note-btn{font-family:var(--body);font-weight:600;border:1px solid var(--charles);background:var(--white);color:var(--charles)}
 .pp-note-btn:hover{background:var(--paper)}
 
+/* "Several spaces here" — the list shown when a clicked pin overlaps
+   others. Each row mirrors the drop-down list: swatch, name, key uses. */
+.pp-stack-hint{font-size:14px;font-style:italic;color:var(--muted-soft);margin-top:4px;line-height:1.45}
+.pp-stack-list{margin-top:8px;max-height:260px;overflow-y:auto;-webkit-overflow-scrolling:touch;border-top:1px solid var(--line)}
+.pp-stack-item{display:flex;gap:9px;align-items:flex-start;width:100%;text-align:left;background:var(--white);border:none;border-bottom:1px solid var(--line);padding:9px 4px;cursor:pointer}
+.pp-stack-item:hover,.pp-stack-item:focus-visible{background:var(--paper)}
+.pp-stack-item .dot{width:10px;height:10px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.pp-stack-item .dot.closed-dot{width:12px;height:12px;border-radius:2px}
+.pp-stack-item .name{display:block;font-family:var(--body);font-weight:700;font-size:15px;color:var(--charles);line-height:1.35}
+.pp-stack-item .meta{display:block;font-size:14px;color:var(--muted);line-height:1.4;margin-top:1px}
+/* "Add a space here?" bubble on the pin-drop path. Add is the primary
+   action (uppercase, filled); Cancel is sentence case. */
+.pp-drop-actions{display:flex;gap:6px;margin-top:10px}
+.pp-drop-actions button{flex:1;font-size:14px;padding:10px 6px;border-radius:4px;line-height:1.3}
+.pp-drop-cancel{font-family:var(--body);font-weight:600;border:1px solid var(--grey-mid);background:var(--white);color:var(--ink)}
+.pp-drop-add{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.03em;border:1px solid var(--optimistic);background:var(--optimistic);color:var(--white)}
+.pp-drop-add:hover{background:var(--optimistic-dark)}
+
+/* "‹ All N spaces here" at the top of a pop-up opened from that list. */
+.pp-back{background:none;border:none;padding:0 0 6px;font-family:var(--body);font-weight:600;font-size:14px;color:var(--optimistic);cursor:pointer}
+.pp-back:hover{text-decoration:underline}
+
+/* "N people don't think this belongs on the map" — under the confirmations
+   line. Error-red text (not raw Freedom Trail Red, which fails at 14px). */
+.pp-removals{margin-top:4px}
+.pp-removals .rcount{font-family:var(--display);font-weight:700;color:var(--freedom-text)}
+
+/* "I don't think this space belongs on the map" — deliberately quieter than
+   Confirm/Correct: a text-style button, then a short reason box in place. */
+.pp-removal-btn{display:block;width:100%;margin-top:8px;padding:6px 4px;background:none;border:none;font-family:var(--body);font-size:14px;color:var(--muted);text-decoration:underline;text-underline-offset:2px;text-align:center}
+.pp-removal-btn:hover{color:var(--freedom-text)}
+.pp-removal-form{margin-top:8px;padding:10px;background:var(--paper);border-radius:4px}
+.pp-removal-form label{display:block;font-family:var(--body);font-weight:700;font-size:14px;color:var(--ink);margin-bottom:5px}
+.pp-removal-form .opt{font-weight:400;font-style:italic;color:var(--muted-soft)}
+.pp-removal-form textarea{width:100%;box-sizing:border-box;font-family:var(--body);font-size:16px;line-height:1.4;padding:7px 8px;border:1px solid var(--grey-mid);border-radius:4px;resize:vertical}
+.pp-removal-actions{display:flex;gap:6px;margin-top:8px}
+.pp-removal-actions button{flex:1;font-size:14px;padding:8px 6px;border-radius:4px}
+.pp-removal-cancel{font-family:var(--body);font-weight:600;border:1px solid var(--grey-mid);background:var(--white);color:var(--ink)}
+.pp-removal-send{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.03em;border:1px solid var(--charles);background:var(--charles);color:var(--white)}
+.pp-removal-send:disabled{opacity:.6}
+.pp-removal-done{margin-top:8px;font-size:14px;font-style:italic;color:var(--muted);text-align:center;line-height:1.45}
+
 /* Google's info window adds its own padding; trim the default gutter. */
 .gm-style-iw-d{overflow:auto !important}
 
@@ -414,6 +487,8 @@ body.page{display:block;overflow:auto;background:var(--white)}
 .page main{max-width:780px;margin:0 auto;padding:36px 20px 60px}
 .page main h1{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:30px;line-height:1.15;color:var(--charles)}
 .page .subtitle{font-size:18px;font-style:italic;color:var(--muted);margin-top:8px;line-height:1.4}
+/* About page's bold opening line (the Space for Public Culture sentence). */
+.page main p.page-lead{font-size:18px;font-weight:700;line-height:1.5;color:var(--charles);margin-top:10px}
 .page main h2{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:18px;line-height:1.3;color:var(--charles);margin-top:34px;padding-top:20px;border-top:1px solid var(--line)}
 .page main p{font-size:16px;line-height:1.65;color:var(--ink);margin-top:12px}
 .page main ul{margin:12px 0 0 22px}
@@ -453,20 +528,46 @@ body.page{display:block;overflow:auto;background:var(--white)}
   .side-toggle{left:50%;top:auto;bottom:0;transform:translateX(-50%);width:52px;height:24px;border-radius:6px 6px 0 0;box-shadow:0 -2px 8px rgba(9,31,47,.25)}
   .side-toggle .arrow{transform:rotate(-90deg)}
   body.map-only .side-toggle .arrow{transform:rotate(90deg)}
+  /* Sidebar collapsed: the map takes the WHOLE screen. Without this the map
+     kept its 54% share and the collapsed sidebar left a blank rectangle
+     beneath it (owner's report, 2026-09-28). */
+  body.map-only #mapWrap{flex:1 1 auto}
 
-  .intro-modal{width:100%;max-height:94vh;padding:22px 18px}
+  .intro-modal{width:100%;max-height:94vh;max-height:94dvh;padding:22px 18px}
   .intro-cols{grid-template-columns:1fr;gap:20px}
   .intro-main h1{font-size:22px;padding-right:30px}
   .be-counted{font-size:24px}
 
   .modal-backdrop{padding:0;align-items:flex-end}
   .modal-backdrop#introModal{align-items:center;padding:10px}
-  .modal{max-width:none;max-height:94vh;border-radius:8px 8px 0 0}
+  /* dvh = the height of the screen actually VISIBLE right now. Plain vh
+     counts the strip behind the browser's address bar too, so a 94vh sheet
+     slid its header — and the × close button — up under that bar (owner's
+     report, 2026-09-28). The vh line stays as the fallback for browsers
+     without dvh. */
+  .modal{max-width:none;max-height:94vh;max-height:94dvh;border-radius:8px 8px 0 0}
   .modal-head{border-radius:8px 8px 0 0}
   .intro-modal{border-radius:8px}
-  .modal-actions{padding:0 16px 20px}
+  /* Pinned action bar (owner's choice, 2026-09-28): on a phone the form's
+     Cancel / Add buttons stick to the bottom of the sheet, so there is always
+     a way back to the map under your thumb, however far you have scrolled.
+     .modal is the scrolling box, so sticky works against it. */
+  .modal-actions{position:sticky;bottom:0;z-index:1;background:var(--white);border-top:1px solid var(--line);padding:12px 16px 20px;box-shadow:0 -4px 12px rgba(9,31,47,.08)}
   .modal-actions .btn{flex:1}
 }
+
+/* Address lookup under the address box (2026-09-28): a dropdown of real
+   street addresses; picking one moves the pin. */
+.addr-wrap{position:relative}
+.addr-suggest{position:absolute;left:0;right:0;top:100%;z-index:5;margin-top:2px;background:var(--white);border:1px solid var(--grey-mid);border-radius:4px;box-shadow:0 6px 18px rgba(9,31,47,.18);overflow:hidden}
+.addr-option{display:block;padding:9px 11px;cursor:pointer;border-bottom:1px solid var(--line);line-height:1.35}
+.addr-option:hover,.addr-option.active{background:var(--paper)}
+.addr-main{display:block;font-size:15px;font-weight:600;color:var(--charles)}
+.addr-sub{display:block;font-size:14px;color:var(--muted)}
+.addr-credit{padding:5px 11px;font-size:14px;font-style:italic;color:var(--muted-soft);text-align:right}
+/* "We couldn't find that address" — amber like the duplicate warning: a
+   warning to read, never a block. */
+.addr-warn{margin-top:8px;background:#FFF4E5;border-left:3px solid var(--warn);border-radius:0 4px 4px 0;padding:10px 12px;font-size:14px;line-height:1.5;color:#6B4415}
 
 /* "This space is outside the City of Boston" — a note, not a warning. The map
    deliberately accepts spaces just over the line in Cambridge, Somerville and
@@ -483,6 +584,11 @@ body.page{display:block;overflow:auto;background:var(--white)}
 /* A single checkbox asked on its own, outside a .checklist group. */
 .check-row.standalone{border:1px solid var(--grey-mid);border-radius:4px;background:var(--white)}
 .check-row.standalone:hover{border-color:var(--optimistic);background:var(--white)}
+
+/* Closing note at the foot of the add form: the deep-dive link arrives on
+   the thank-you pop-up, after the space has an id. */
+.deep-note{font-size:15px;line-height:1.55;color:var(--muted);margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.deep-note b{color:var(--ink)}
 
 /* A second lede paragraph in the same section keeps a full paragraph gap. */
 .section-lede + .section-lede{margin-top:0}
