@@ -31,7 +31,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap">
-<link rel="stylesheet" href="styles.css?v=44">
+<link rel="stylesheet" href="styles.css?v=50">
 </head>
 <body class="embed">
 
@@ -50,7 +50,7 @@
     <div class="map-controls">
       <div class="ctrl-row">
         <button class="btn-quiet" id="refreshBtn" title="Load the latest community submissions"><span class="refresh-ico" aria-hidden="true">&#8635;</span> Refresh</button>
-        <button class="btn-cta" id="addBtn">+ Add a space</button>
+        <button class="btn-cta" id="addBtn">Find or Add a Space</button>
       </div>
       <button class="count-pill" id="listToggle" aria-expanded="false" aria-controls="listPanel" title="Show the list of spaces">
         <span id="countPill">Loading&hellip;</span><span class="plus" aria-hidden="true">+</span>
@@ -139,7 +139,7 @@
           <div class="addr-suggest" id="addrSuggest" role="listbox" aria-label="Address suggestions" hidden></div>
         </div>
         <!-- Wording swaps in app.js depending on how the location was set. -->
-        <div class="hint" id="addrHint">Filled in automatically from your search or map pin. To change it, start typing and pick the address from the list &mdash; the pin moves to match.</div>
+        <div class="hint" id="addrHint">Filled in automatically from your search or map pin. To change it, type the new address or pick it from the list &mdash; the pin moves to match.</div>
         <!-- "We couldn't find that address" — a warning, never a block. -->
         <div class="addr-warn" id="addrWarn" hidden></div>
       </div>
@@ -272,6 +272,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="app.js?v=44"></script>
+<script src="app.js?v=50"></script>
 </body>
 </html>

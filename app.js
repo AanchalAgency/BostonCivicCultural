@@ -218,6 +218,11 @@ const LABEL_ALIASES = {
   // sheet too.)
   "Imminent": IMMINENT,
   "Imminent (about to close) (about to close)": IMMINENT,
+  // Purpose: the stored value is "Produce" (SHOWN as "Create"), but the live
+  // sheet had "Create" written into space_purpose by hand — 276 rows in Oct
+  // 2026. Without this they matched no legend group and fell to the hollow
+  // "Currently unknown" pin, so no amber Create pins showed at all.
+  "Create": "Produce",
 };
 
 function canonicalLabel(s) {
@@ -535,6 +540,13 @@ const CLOSURE_LABELS = {
   function optionLabel(options, value) {
     const hit = options.filter((o) => (typeof o === "string" ? o : o.value) === value)[0];
     return hit ? (typeof hit === "string" ? hit : hit.label) : value;
+  }
+
+  // Matches isVisible_ in Code.gs: allow, blank and review are on the map;
+  // only hold is hidden.
+  function isPublicStatus(status) {
+    const s = String(status || "").trim().toLowerCase();
+    return s === "" || s === "allow" || s === "review";
   }
 
   function isClosed(space) {
@@ -1293,7 +1305,7 @@ const CLOSURE_LABELS = {
       .sort((x, y) => nameOf(x).localeCompare(nameOf(y), undefined, { sensitivity: "base" }));
 
     if (!items.length) {
-      el.innerHTML = '<div class="empty-msg">Nothing here for the categories currently shown on the legend. Turn one back on, or use “+ Add a space”.</div>';
+      el.innerHTML = '<div class="empty-msg">Nothing here for the categories currently shown on the legend. Turn one back on, or use “Find or Add a Space”.</div>';
       return;
     }
 
@@ -1852,7 +1864,7 @@ const CLOSURE_LABELS = {
         const parts = addressFromComponents(results[0].address_components);
         setVerifiedAddress(parts.street || trimGoogleAddress(results[0].formatted_address), parts.zip);
         hint.textContent =
-          "Filled in automatically from the spot you clicked. If it's wrong, type the right address and pick it from the list — the pin moves to match.";
+          "Filled in automatically from the spot you clicked. If it's wrong, type the right address or pick it from the list — the pin moves to match.";
       } else {
         hint.textContent = "Couldn't find an address for that spot — please type it in.";
       }
@@ -1932,7 +1944,7 @@ const CLOSURE_LABELS = {
     // let someone replace it with a different place by accident.
     $("searchWrap").hidden = true;
     $("addrHint").textContent =
-      "The street address as currently recorded. If it's wrong, type the right one and pick it from the list — the pin moves to match.";
+      "The street address as currently recorded. If it's wrong, type the right one or pick it from the list — the pin moves to match.";
 
     infoWindow.close();
     closePinSheet();
@@ -1963,7 +1975,7 @@ const CLOSURE_LABELS = {
     hideAddrSuggest();
     $("searchWrap").hidden = false;
     $("addrHint").textContent =
-      "Filled in automatically from your search or map pin. To change it, start typing and pick the address from the list — the pin moves to match.";
+      "Filled in automatically from your search or map pin. To change it, type the new address or pick it from the list — the pin moves to match.";
     $("addTitle").textContent = "Add a Cultural Space to the Map";
     $("saveAssetBtn").textContent = "Add to the map";
     const pac = $("pacHost").firstElementChild;
@@ -2062,9 +2074,16 @@ const CLOSURE_LABELS = {
   let addrLookup = null;   // { lib, token, seq, items, active }
 
   function initAddressLookup(placesLib) {
+    const input = $("fAddr");
+    // A hand-typed address moves the pin too, once the person leaves the box
+    // (see moveToTypedAddress). "change" only fires when the text really
+    // changed, and a picked suggestion has already moved the pin, so that
+    // case is skipped inside. Wired before the check below so it works even
+    // where the suggestion list is unavailable.
+    input.addEventListener("change", () => { addrMovePending = moveToTypedAddress(); });
+
     if (!placesLib || !placesLib.AutocompleteSuggestion) return;   // older API: plain box
     addrLookup = { lib: placesLib, token: null, seq: 0, items: [], active: -1 };
-    const input = $("fAddr");
     let timer = null;
 
     input.addEventListener("input", () => {
@@ -2086,6 +2105,12 @@ const CLOSURE_LABELS = {
       } else if (e.key === "Enter" && addrLookup.active > -1) {
         e.preventDefault();
         pickAddrSuggestion(addrLookup.items[addrLookup.active]);
+      } else if (e.key === "Enter") {
+        // Enter with no suggestion highlighted = "this is the address":
+        // close the list and look up what was typed.
+        e.preventDefault();
+        hideAddrSuggest();
+        addrMovePending = moveToTypedAddress();
       } else if (e.key === "Escape") {
         e.stopPropagation();   // close the list, not the whole form
         hideAddrSuggest();
@@ -2206,6 +2231,72 @@ const CLOSURE_LABELS = {
      the check is skipped and address_check stays blank. */
   const ADDRESS_FAR_METERS = 300;
 
+  /* One Geocoding API lookup of typed address text. Returns null when Google
+     has no real street-level match (no number, a partial match, just a
+     street or a town); otherwise { at: {lat,lng}, zip }. Throws if the
+     Geocoding API itself is unavailable. Shared by moveToTypedAddress and
+     checkTypedAddress. */
+  async function geocodeStreet(text) {
+    if (!geocoder) {
+      const geocodingLib = await google.maps.importLibrary("geocoding");
+      geocoder = new geocodingLib.Geocoder();
+    }
+    const { results } = await geocoder.geocode({
+      address: text,
+      bounds: CONFIG.BOSTON_BOUNDS,
+      componentRestrictions: { country: "US" },
+    });
+    const r = results && results[0];
+    const types = (r && r.types) || [];
+    const isStreetLevel = r && !r.partial_match &&
+      (types.indexOf("street_address") > -1 || types.indexOf("premise") > -1 ||
+       types.indexOf("subpremise") > -1);
+    if (!isStreetLevel) return null;
+    return {
+      at: { lat: r.geometry.location.lat(), lng: r.geometry.location.lng() },
+      zip: addressFromComponents(r.address_components).zip,
+    };
+  }
+
+  /* Hand-typed address -> move the pin (owner's request, 2026-10-14).
+     Before v45 only a PICKED suggestion moved the pin; typed text was merely
+     checked on submit and, if it was far from the pin, warned about. Now,
+     when someone types an address and leaves the box (or presses Enter),
+     it is looked up once and, if Google finds it, the pin moves there — for
+     new spaces and corrections alike, just like picking it from the list.
+     The text stays exactly as typed (so a "Suite 5" is never lost); the zip
+     comes from Google's match. Not found -> the pin stays put, a hint says
+     so, and the usual submit-time warning still applies.
+
+     COST: one Geocoding call per changed address (10k free/month). A found
+     address is marked verified, so submit does NOT look it up again. */
+  let addrMovePending = null;   // the running lookup, awaited by submitAsset
+
+  async function moveToTypedAddress() {
+    const text = $("fAddr").value.trim();
+    if (!text || text === verifiedAddress || demoMode) return;
+    const hint = $("addrHint");
+    try {
+      const found = await geocodeStreet(text);
+      if ($("fAddr").value.trim() !== text) return;   // they kept typing — stale answer
+      if (!found) {
+        hint.textContent = "We couldn't find that address, so the pin hasn't moved. Check it, pick one from the suggestions, or drag the pin.";
+        return;
+      }
+      verifiedAddress = text;
+      draftZip = found.zip;
+      addressCheck = "verified";
+      addressWarnedFor = null;
+      $("addrWarn").hidden = true;
+      setDraftLocation(found.at, null);   // re-runs the outside-Boston + duplicate checks
+      map.panTo(found.at);
+      hint.textContent = "Address found — the pin has moved to it.";
+    } catch (err) {
+      // Geocoding unavailable: leave the pin; submit's check is skipped too.
+      console.warn("Address lookup unavailable:", err && err.message);
+    }
+  }
+
   async function checkTypedAddress() {
     const text = $("fAddr").value.trim();
     if (!text) return { ok: true, check: "", zip: "" };
@@ -2217,28 +2308,13 @@ const CLOSURE_LABELS = {
 
     let check = "verified", zip = "", far = 0;
     try {
-      if (!geocoder) {
-        const geocodingLib = await google.maps.importLibrary("geocoding");
-        geocoder = new geocodingLib.Geocoder();
-      }
-      const { results } = await geocoder.geocode({
-        address: text,
-        bounds: CONFIG.BOSTON_BOUNDS,
-        componentRestrictions: { country: "US" },
-      });
-      const r = results && results[0];
-      const types = (r && r.types) || [];
-      const isStreetLevel = r && !r.partial_match &&
-        (types.indexOf("street_address") > -1 || types.indexOf("premise") > -1 ||
-         types.indexOf("subpremise") > -1);
-      if (!isStreetLevel) {
+      const found = await geocodeStreet(text);
+      if (!found) {
         check = "not found";
       } else {
-        zip = addressFromComponents(r.address_components).zip;
+        zip = found.zip;
         if (draftLocation) {
-          far = metresBetween(
-            { lat: draftLocation.lat, lng: draftLocation.lng },
-            { lat: r.geometry.location.lat(), lng: r.geometry.location.lng() });
+          far = metresBetween({ lat: draftLocation.lat, lng: draftLocation.lng }, found.at);
           if (far > ADDRESS_FAR_METERS) check = "far from pin";
         }
       }
@@ -2456,6 +2532,15 @@ const CLOSURE_LABELS = {
   }
 
   async function submitAsset(btn) {
+    // Typing an address and clicking straight onto the button starts the
+    // pin-move lookup on the same click; let it land first so the saved
+    // coordinates are the moved ones.
+    if (addrMovePending) {
+      btn.disabled = true;
+      try { await addrMovePending; } catch (e) { /* handled inside */ }
+      addrMovePending = null;
+      btn.disabled = false;
+    }
     const payload = validateAddForm();
     if (!payload) return;
 
@@ -2511,22 +2596,22 @@ const CLOSURE_LABELS = {
           // space it corrects. Appending it here would draw a second pin on
           // top of the first, so re-read the merged result instead.
           await loadAssets(true);
-        } else if (saved.review_status === "allow") {
+        } else if (isPublicStatus(saved.review_status)) {
           assets = assets.concat([saved]);
         }
-        // A submission the server flagged for review (bad language, or an
-        // exact duplicate) is saved but not public yet — nothing to draw.
+        // A submission the server held (bad language) is saved but not
+        // public — nothing to draw.
       }
 
       closeModal("addModal");
       resetAddForm();
       renderAll();
 
-      // Anything not "allow" is off the public map — "review" (possible
-      // duplicate, queued for the owner) and "hold" (auto-rejected for bad
-      // language) both get the same neutral message; the toast never tells a
-      // submitter which net caught them.
-      const held = !demoMode && saved.review_status !== "allow";
+      // Since 2026-10-14 "review" is PUBLIC (flagged for the owner to look
+      // at, but on the map), so only "hold" (bad language) is off the map.
+      // A held submission gets a neutral message that never says which net
+      // caught it.
+      const held = !demoMode && !isPublicStatus(saved.review_status);
       if (!held) openInfoWindow(wasCorrection ? correctedId : saved.space_id);
 
       /* The deep-dive prompt. A correction's responses must join to the
@@ -2715,6 +2800,9 @@ const CLOSURE_LABELS = {
         const label = hidden ? "Show the panel" : "Hide the panel";
         this.title = label;
         this.setAttribute("aria-label", label);
+        // The tab's visible word (was a "‹" arrow until v45 — owner's request,
+        // 2026-10-14): HIDE while the panel is open, SHOW once it is tucked away.
+        this.querySelector(".side-toggle-text").textContent = hidden ? "Show" : "Hide";
       });
     }
 

@@ -112,7 +112,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
 /* The sidebar is the page's identity: Charles Blue field with a Freedom Trail
    Red rule on its map-side edge (the "minimal" red the guidelines ask for). */
-#sidebar{width:clamp(320px,25%,460px);flex-shrink:0;background:var(--charles);color:var(--on-dark);border-right:4px solid var(--freedom);padding:26px 22px 22px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+/* No Freedom Trail Red rule on the map edge any more (removed at the owner's
+   request, 2026-10-14) - the sidebar meets the map directly. */
+#sidebar{width:clamp(320px,25%,460px);flex-shrink:0;background:var(--charles);color:var(--on-dark);padding:26px 22px 22px;overflow-y:auto;-webkit-overflow-scrolling:touch}
 #sidebar h1{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:27px;line-height:1.15;color:var(--white)}
 #sidebar .lede{margin-top:12px;font-size:16px;line-height:1.55;color:var(--on-dark-muted)}
 #sidebar h2{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:16px;color:var(--white);margin-top:26px;padding-top:16px;border-top:1px solid rgba(255,255,255,.18)}
@@ -194,10 +196,14 @@ body.embed #mapWrap{flex:1 1 auto;width:100%;height:100%;min-height:0}
 body.map-only #sidebar{display:none}
 /* Filled Optimistic Blue and sized up so the collapse control is clearly a
    control, not a sliver of chrome (owner's request, 2026-08-27). */
-.side-toggle{position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:5;width:32px;height:72px;border:none;border-radius:0 8px 8px 0;background:var(--optimistic);color:var(--white);font-size:18px;font-weight:700;box-shadow:2px 0 8px rgba(9,31,47,.35);display:flex;align-items:center;justify-content:center;padding:0}
+/* Collapse tab. Shows the word HIDE / SHOW (set in app.js) instead of the
+   old "‹" arrow — owner's request, 2026-10-14. Montserrat uppercase like the
+   other buttons. On desktop the tab is a tall, narrow strip with the word
+   running sideways, reading bottom-to-top (owner's choice, 2026-10-14);
+   the phone layout below turns it back to horizontal. */
+.side-toggle{position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:5;width:34px;min-height:84px;border:none;border-radius:0 8px 8px 0;background:var(--optimistic);color:var(--white);font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:13px;line-height:1;box-shadow:2px 0 8px rgba(9,31,47,.35);display:flex;align-items:center;justify-content:center;padding:12px 0}
 .side-toggle:hover{background:var(--optimistic-dark)}
-.side-toggle .arrow{display:inline-block;transition:transform .2s ease;line-height:1}
-body.map-only .side-toggle .arrow{transform:rotate(180deg)}
+.side-toggle-text{writing-mode:vertical-rl;transform:rotate(180deg)}
 .map-error{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:32px;background:var(--paper);font-size:16px;line-height:1.6;color:var(--muted);z-index:6}
 .map-error b{display:block;font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:16px;color:var(--charles);margin-bottom:8px}
 
@@ -297,6 +303,16 @@ body.map-only .side-toggle .arrow{transform:rotate(180deg)}
 /* Reads as a sub-heading, matching "There's three ways you can take part:"
    above it — bold and full-strength ink, not muted. */
 .learn-more{color:var(--ink) !important}
+/* "Early Contributor Phase" label (owner's request, 2026-10-14) — sits above
+   the title on the intro pop-up, the sidebar and the About page. A small
+   tag in Boston's supporting LIGHT grey (#D2D2D2) with Charles Blue caps —
+   about 12:1 contrast. Owner's choice, 2026-10-14 (v47 was Optimistic Blue,
+   v48 dark grey). Pale on the dark sidebar, so it stands out there too. */
+.phase-badge{display:inline-block;font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:14px;line-height:1.2;color:var(--charles);background:var(--grey-mid);padding:5px 10px;border-radius:3px;margin-bottom:10px}
+/* "This tool works best on a larger screen…" — a quiet note under the three
+   steps on the intro pop-up. */
+.intro-main .device-note{font-style:italic;color:var(--muted-soft);display:flex;align-items:center;gap:8px}
+.device-note .device-ico{flex:0 0 auto;width:20px;height:20px}
 .intro-nav{display:flex;gap:12px;margin-top:14px;flex-wrap:wrap}
 /* A flex column so the photo carousel can be pushed to the BOTTOM of the bar
    (margin-top:auto on .carousel below) — the padding gives it the same
@@ -536,19 +552,24 @@ body.page{display:block;overflow:auto;background:var(--white)}
   /* Map on top, sidebar below it as one single scroll region. Sized as shares
      of #app, not vh — vh would include any banner and overflow the screen. */
   #mapWrap{order:1;flex:0 0 54%;min-height:220px}
-  #sidebar{order:2;flex:1 1 auto;width:100%;border-right:none;border-top:4px solid var(--freedom);padding:20px 18px}
+  #sidebar{order:2;flex:1 1 auto;width:100%;padding:20px 18px}   /* no red rule (2026-10-14) */
   #sidebar h1{font-size:22px}
 
   .map-controls{top:10px;right:10px;gap:6px}
-  .map-controls .btn-cta{padding:10px 13px}
+  /* "Find or Add a Space" is twice as long as the old "+ Add a space", so
+     the phone version is a size smaller to keep it off the middle of the map. */
+  .map-controls .btn-cta{font-size:12px;letter-spacing:.03em;padding:8px 11px}
   .list-panel{max-height:38vh}   /* leave map visible behind the open list */
-  .map-legend{right:10px;bottom:26px;max-width:75%;padding:10px 12px}
+  .map-legend{right:10px;bottom:36px;max-width:75%;padding:10px 12px}   /* clears the 30px HIDE tab */
 
   /* The collapse tab flips to vertical: the sidebar is BELOW the map on a
      phone, so it tucks down/up instead of left/right. */
-  .side-toggle{left:50%;top:auto;bottom:0;transform:translateX(-50%);width:52px;height:24px;border-radius:6px 6px 0 0;box-shadow:0 -2px 8px rgba(9,31,47,.25)}
-  .side-toggle .arrow{transform:rotate(-90deg)}
-  body.map-only .side-toggle .arrow{transform:rotate(90deg)}
+  /* Taller than the old 24px arrow tab so the word is legible and easy to
+     tap; z-index 6 keeps it above the legend and the zoom buttons. */
+  .side-toggle{left:50%;top:auto;bottom:0;transform:translateX(-50%);width:auto;min-width:72px;min-height:0;height:30px;padding:0 12px;font-size:12px;border-radius:6px 6px 0 0;box-shadow:0 -2px 8px rgba(9,31,47,.25);z-index:6}
+  /* On a phone the tab sits on the map's BOTTOM edge, so the word reads
+     normally, left to right. */
+  .side-toggle-text{writing-mode:horizontal-tb;transform:none}
   /* Sidebar collapsed: the map takes the WHOLE screen. Without this the map
      kept its 54% share and the collapsed sidebar left a blank rectangle
      beneath it (owner's report, 2026-09-28). */
